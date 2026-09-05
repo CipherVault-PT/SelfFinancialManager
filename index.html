@@ -20,7 +20,7 @@
 :root{
   --bg:#0A0D16; --bg-2:#0C1019; --surface:#121826; --surface-2:#171F30;
   --line:rgba(160,178,214,.09); --line-2:rgba(160,178,214,.16);
-  --brass:#C9A96A; --brass-2:#DFC48C; --brass-dim:rgba(201,169,106,.14);
+  --brass:#C9A96A; --brass-2:#DFC48C; --brass-dim:rgba(201,169,106,.14); --accent-rgb:201,169,106;
   --text:#ECEEF4; --muted:#8B93A8; --muted-2:#5E6883;
 }
 :root{
@@ -39,7 +39,7 @@ body{
   font-size:15px; line-height:1.5; letter-spacing:-.006em;
   -webkit-font-smoothing:antialiased; padding-bottom:80px;
   background-image:radial-gradient(1200px 600px at 82% -8%, rgba(126,140,232,.06), transparent 60%),
-                   radial-gradient(900px 500px at 8% 4%, rgba(201,169,106,.05), transparent 55%);
+                   radial-gradient(900px 500px at 8% 4%, rgba(var(--accent-rgb),.05), transparent 55%);
   min-height:100vh;
 }
 .wrap{max-width:1080px;margin:0 auto;padding:0 18px}
@@ -50,7 +50,7 @@ body{
 .aurora-c{position:fixed;top:0;left:0;width:100%;height:64vh;z-index:-2;pointer-events:none;
   -webkit-mask:linear-gradient(180deg,#000 46%,transparent);mask:linear-gradient(180deg,#000 46%,transparent)}
 .aurora-base{position:fixed;inset:0;z-index:-3;pointer-events:none;background:
-  radial-gradient(60vw 34vh at 20% -6%,rgba(201,169,106,.16),transparent 70%),
+  radial-gradient(60vw 34vh at 20% -6%,rgba(var(--accent-rgb),.16),transparent 70%),
   radial-gradient(52vw 30vh at 82% -4%,rgba(95,199,154,.12),transparent 70%),
   radial-gradient(46vw 30vh at 55% -10%,rgba(124,108,224,.12),transparent 70%),var(--bg)}
 /* entrada em cascata dos cartões */
@@ -73,7 +73,7 @@ header{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);
 .brand .gem{width:23px;height:27px;flex-shrink:0;animation:gemGlow 3.8s ease-in-out infinite}
 .brand .gem svg{width:100%;height:100%;display:block}
 .brand .gem .shimmer{animation:gemShim 4.2s ease-in-out infinite}
-@keyframes gemGlow{0%,100%{filter:drop-shadow(0 0 5px rgba(201,169,106,.35))}50%{filter:drop-shadow(0 0 13px rgba(201,169,106,.62))}}
+@keyframes gemGlow{0%,100%{filter:drop-shadow(0 0 5px rgba(var(--accent-rgb),.35))}50%{filter:drop-shadow(0 0 13px rgba(var(--accent-rgb),.62))}}
 @keyframes gemShim{0%,72%,100%{opacity:0}10%{opacity:.55}22%{opacity:0}}
 .brand b{background:linear-gradient(120deg,var(--brass-2) 18%,#F2F6FF 50%,var(--brass-2) 82%);background-size:220% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-weight:600;animation:brandShine 7s ease-in-out infinite}
 @keyframes brandShine{0%,68%{background-position:150% center}100%{background-position:-50% center}}
@@ -97,7 +97,7 @@ header{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);
 .btn:active{transform:translateY(1px)}
 .btn.icon{padding:8px 10px}
 .btn.pri{background:linear-gradient(135deg,var(--brass-2),var(--brass));color:#241d0e;
-  border:none;font-weight:600;box-shadow:0 4px 18px rgba(201,169,106,.24)}
+  border:none;font-weight:600;box-shadow:0 4px 18px rgba(var(--accent-rgb),.24)}
 .btn.pri:hover{filter:brightness(1.05)}
 .btn.ghost{background:transparent;border-color:var(--line-2)}
 .seg{display:inline-flex;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:3px}
@@ -190,8 +190,10 @@ header{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);
 .cashents{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px}
 .cashbtns{display:flex;align-items:center;gap:8px;margin-top:12px}
 .btn.cbtn{padding:7px 12px;font-size:13px}
-.btn.xdel{flex:0 0 auto;padding:9px 12px;background:transparent;border:1px solid var(--line);opacity:.55;font-size:15px;line-height:1}
-.btn.xdel:hover,.btn.xdel:active{opacity:1;border-color:var(--down);background:color-mix(in srgb,var(--down) 12%,transparent)}
+.btn.xdel,.btn.xic{flex:0 0 auto;padding:9px 12px;background:transparent;border:1px solid var(--line);opacity:.55;font-size:15px;line-height:1}
+.btn.xdel:hover,.btn.xdel:active,.btn.xic:hover,.btn.xic:active{opacity:1;border-color:var(--down);background:color-mix(in srgb,var(--down) 12%,transparent)}
+.btn.xic.on{opacity:1;border-color:var(--brass);background:rgba(var(--accent-rgb),.14);box-shadow:0 0 12px -4px rgba(var(--accent-rgb),.5)}
+.btn.xic:hover{border-color:var(--brass)}
 .pos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:14px;padding-top:13px;
   border-top:1px solid var(--line)}
 .pg{display:flex;flex-direction:column;gap:3px}
@@ -231,7 +233,7 @@ header{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);
 .empty{text-align:center;padding:52px 20px;border:1px dashed var(--line-2);border-radius:var(--r-lg);
   background:rgba(18,24,38,.4)}
 .empty .ei{width:46px;height:46px;margin:0 auto 16px;transform:rotate(45deg);border-radius:8px;
-  background:var(--brass-dim);border:1px solid rgba(201,169,106,.3)}
+  background:var(--brass-dim);border:1px solid rgba(var(--accent-rgb),.3)}
 .empty h4{font-family:var(--disp);font-weight:600;font-size:17px;margin-bottom:7px}
 .empty p{color:var(--muted);font-size:14px;max-width:340px;margin:0 auto 20px}
 
@@ -276,7 +278,7 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
 .res .rn{font-weight:500;font-size:14px} .res .rs{font-size:11.5px;color:var(--muted-2);text-transform:uppercase;font-family:var(--mono)}
 .res .rr{margin-left:auto;font-size:11px;color:var(--muted-2);font-family:var(--mono)}
 .picked{display:flex;align-items:center;gap:11px;padding:11px;background:var(--brass-dim);
-  border:1px solid rgba(201,169,106,.3);border-radius:12px}
+  border:1px solid rgba(var(--accent-rgb),.3);border-radius:12px}
 .picked img{width:30px;height:30px;border-radius:8px}
 .searching{padding:14px;text-align:center;color:var(--muted-2);font-size:13px}
 .lnk{color:var(--brass-2);cursor:pointer;float:right;font-weight:500;font-size:12px}
@@ -309,7 +311,7 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
 /* --- polimento Aurora --- */
 .nw .cur{color:var(--brass)}
 .hero{position:relative}
-.ribbon{box-shadow:0 0 24px -8px rgba(201,169,106,.4)}
+.ribbon{box-shadow:0 0 24px -8px rgba(var(--accent-rgb),.4)}
 .tile,.bd,.htbl{background:linear-gradient(180deg,rgba(22,29,45,.78),rgba(16,21,33,.82));
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 30px -18px rgba(0,0,0,.7)}
@@ -317,13 +319,30 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
   box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 10px 28px -18px rgba(0,0,0,.65);
   transition:border-color .25s,box-shadow .25s,transform .25s}
 .pos:hover{border-color:var(--line-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 16px 34px -18px rgba(0,0,0,.75)}
-.btn.pri{box-shadow:0 4px 16px -6px rgba(201,169,106,.55)}
+.btn.pri{box-shadow:0 4px 16px -6px rgba(var(--accent-rgb),.55)}
 header{background:linear-gradient(180deg,rgba(8,10,17,.9),rgba(8,10,17,.66))}
 .pwa-btn{align-items:center;gap:5px;font-size:12.5px;font-weight:500;padding:8px 13px;
-  border:1px solid rgba(201,169,106,.4);background:rgba(201,169,106,.1);color:var(--brass-2);
-  box-shadow:0 0 16px -6px rgba(201,169,106,.4);animation:pwaPulse 2.6s ease-in-out infinite}
-.pwa-btn:hover{background:rgba(201,169,106,.2);border-color:var(--brass)}
-@keyframes pwaPulse{0%,100%{box-shadow:0 0 14px -8px rgba(201,169,106,.4)}50%{box-shadow:0 0 20px -6px rgba(201,169,106,.7)}}
+  border:1px solid rgba(var(--accent-rgb),.4);background:rgba(var(--accent-rgb),.1);color:var(--brass-2);
+  box-shadow:0 0 16px -6px rgba(var(--accent-rgb),.4);animation:pwaPulse 2.6s ease-in-out infinite}
+.chartbox{background:linear-gradient(180deg,rgba(22,29,45,.78),rgba(16,21,33,.82));backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:var(--r);padding:16px 16px 6px;margin-bottom:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 30px -18px rgba(0,0,0,.7)}
+.chart-head .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2);font-weight:600}
+.chart-head .chg{font-family:var(--disp);font-weight:600;font-size:17px;margin-top:4px}
+.spark{width:100%;height:150px;display:block;margin-top:6px}
+.chart-empty{color:var(--muted);font-size:13.5px;padding:22px 4px 26px;line-height:1.5}
+.set-sec{font-family:var(--disp);font-weight:600;font-size:15px;color:var(--brass-2);margin:2px 0 14px}
+.bgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media(max-width:520px){.bgrid{grid-template-columns:repeat(3,1fr)}}
+.bgchip{display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--muted);font-size:11.5px;font-weight:500;cursor:pointer;transition:all .2s}
+.bgchip .bgico{font-size:19px;line-height:1}
+.bgchip:hover{border-color:var(--line-2);color:var(--text)}
+.bgchip.on{border-color:var(--brass);background:var(--brass-dim);color:var(--text);box-shadow:0 0 14px -5px rgba(var(--accent-rgb),.5)}
+.acrow{display:flex;gap:10px;flex-wrap:wrap}
+.acchip{width:38px;height:38px;border-radius:50%;border:2px solid var(--line);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0}
+.acchip .acdot{width:22px;height:22px;border-radius:50%;background:var(--ac);box-shadow:0 0 10px -2px var(--ac)}
+.acchip:hover{transform:scale(1.08)}
+.acchip.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac),0 0 14px -3px var(--ac)}
+.pwa-btn:hover{background:rgba(var(--accent-rgb),.2);border-color:var(--brass)}
+@keyframes pwaPulse{0%,100%{box-shadow:0 0 14px -8px rgba(var(--accent-rgb),.4)}50%{box-shadow:0 0 20px -6px rgba(var(--accent-rgb),.7)}}
 @media(max-width:560px){.pwa-btn .pwa-lbl{display:none}}
 </style>
 </head>
@@ -1026,11 +1045,24 @@ const STOCKS=[
 {n:"DSV",t:"DSV",x:"Copenhaga",c:"DKK"}
 ];
 const state={
-  positions:[], closed:[], cash:[],
-  settings:{displayCurrency:'EUR', fxManual:null, apiKey:'', refreshMin:5, fxFeePct:0.5, proxyUrl:''},
+  positions:[], closed:[], cash:[], alerts:[], history:[],
+  settings:{displayCurrency:'EUR', fxManual:null, apiKey:'', refreshMin:5, fxFeePct:0.5, proxyUrl:'', bgStyle:'aurora', accent:'gold'},
   cache:{prices:{}, stockPrices:{}, rates:{...DEFAULT_RATES}, updated:null, stockUpdated:null}
 };
-function load(){ try{const d=JSON.parse(localStorage.getItem(LS)); if(d){Object.assign(state,d); state.settings={displayCurrency:'EUR',fxManual:null,apiKey:'',refreshMin:5,fxFeePct:0.5,proxyUrl:'',...d.settings}; state.cache={prices:{},stockPrices:{},updated:null,stockUpdated:null,...d.cache,rates:{...DEFAULT_RATES,...(d.cache&&d.cache.rates)}};}}catch(e){} }
+function load(){ try{const d=JSON.parse(localStorage.getItem(LS)); if(d){Object.assign(state,d); state.alerts=d.alerts||[]; state.history=d.history||[]; state.settings={displayCurrency:'EUR',fxManual:null,apiKey:'',refreshMin:5,fxFeePct:0.5,proxyUrl:'',bgStyle:'aurora',accent:'gold',...d.settings}; state.cache={prices:{},stockPrices:{},updated:null,stockUpdated:null,...d.cache,rates:{...DEFAULT_RATES,...(d.cache&&d.cache.rates)}};}}catch(e){} }
+const ACCENTS=[
+  {id:'gold',n:'Dourado',a:'#C9A96A',a2:'#DFC48C',rgb:'201,169,106'},
+  {id:'jade',n:'Jade',a:'#54C295',a2:'#7FD6AF',rgb:'84,194,149'},
+  {id:'violet',n:'Violeta',a:'#9B7EE0',a2:'#B9A3EC',rgb:'155,126,224'},
+  {id:'blue',n:'Azul',a:'#5B9BD5',a2:'#86B7E3',rgb:'91,155,213'},
+  {id:'coral',n:'Coral',a:'#E88B6B',a2:'#F0A98E',rgb:'232,139,107'},
+  {id:'emerald',n:'Esmeralda',a:'#2EC98A',a2:'#5FD9A8',rgb:'46,201,138'},
+  {id:'rose',n:'Rosa',a:'#E0729B',a2:'#EC9BB9',rgb:'224,114,155'}
+];
+function applyAccent(id,silent){ const c=ACCENTS.find(x=>x.id===id)||ACCENTS[0]; const r=document.documentElement.style;
+  r.setProperty('--brass',c.a); r.setProperty('--brass-2',c.a2); r.setProperty('--accent-rgb',c.rgb);
+  if(state.settings){ state.settings.accent=c.id; if(!silent){ save(); if(typeof modalSettings==='function'&&document.querySelector('.modal'))modalSettings(); } } }
+const BGS=[{id:'aurora',n:'Aurora',i:'🌌'},{id:'net',n:'Rede',i:'🕸️'},{id:'stars',n:'Estrelas',i:'✨'},{id:'nebula',n:'Nebulosa',i:'🌫️'},{id:'none',n:'Nenhum',i:'⬛'}];
 function save(){ try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){} }
 
 /* ---------- utils ---------- */
@@ -1114,14 +1146,44 @@ function agg(){
     winRate:state.closed.length?wins/state.closed.length*100:0,best,worst,closedN:state.closed.length};
 }
 
-/* ---------- APIs ---------- */
+/* ---------- alertas de preço ---------- */
+function notifyAlert(a, cur){
+  const now=(()=>{const p=state.positions.find(x=>x.id===a.posId);return p?priceInfo(p).price:0;})();
+  const msg=`🔔 ${a.name}: ${a.above?'subiu para':'desceu para'} ${price(a.price,a.cur)} (agora ${price(now,a.cur)})`;
+  toast(msg,0);
+  try{ if('Notification' in window && Notification.permission==='granted'){ const ic=document.getElementById('favi'); new Notification('Aurora Investments',{body:msg,icon:ic?ic.href:undefined}); } }catch(e){}
+}
+function checkAlerts(){ // arg ignorado — verifica todos
+  if(!state.alerts||!state.alerts.length)return;
+  let fired=false;
+  state.alerts.forEach(a=>{ if(!a.active)return;
+    const p=state.positions.find(x=>x.id===a.posId); if(!p)return;
+    const pi=priceInfo(p); if(!(pi.price>0))return;
+    const hit = a.above ? pi.price>=a.price : pi.price<=a.price;
+    if(hit){ a.active=false; fired=true; notifyAlert(a,pi.cur); }
+  });
+  if(fired){ save(); if(typeof renderView==='function')renderView(); }
+}
+function alertsFor(posId){ return (state.alerts||[]).filter(a=>a.posId===posId); }
+
+/* ---------- histórico do património ---------- */
+function recordHistory(){
+  const a=agg(); if(!(a.netWorth>0))return;
+  const today=new Date().toISOString().slice(0,10);
+  state.history=state.history||[];
+  const last=state.history[state.history.length-1];
+  if(last&&last.d===today){ last.v=a.netWorth; }
+  else { state.history.push({d:today,v:a.netWorth}); }
+  if(state.history.length>400)state.history=state.history.slice(-400);
+}
+
 async function fetchPrices(){
   const ids=[...new Set(state.positions.filter(p=>p.kind==='crypto').map(p=>p.coingeckoId))];
   if(!ids.length){ setStatus(true); return; }
   try{
     const r=await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=eur,usd&include_24hr_change=true`);
     if(!r.ok)throw 0; const d=await r.json();
-    Object.assign(state.cache.prices,d); state.cache.updated=Date.now(); save(); setStatus(true); renderAll();
+    Object.assign(state.cache.prices,d); state.cache.updated=Date.now(); checkAlerts(); recordHistory(); save(); setStatus(true); renderAll();
   }catch(e){ setStatus(false); }
 }
 async function fetchFx(){
@@ -1169,27 +1231,24 @@ async function fetchStockPrices(){
   if(!syms.length||stockBusy)return;
   stockBusy=true;
   try{
-    let ok=0,auth=false,limit=false;
+    let ok=0;
     for(let i=0;i<syms.length;i++){
       const s=syms[i]; let got=false;
-      if(key){ const mic=stockMic(s);
+      // 1) Yahoo primeiro — tempo real, via o teu atalho
+      const y=await fetchYahoo(s);
+      if(y){ state.cache.stockPrices[s]={...y,ts:Date.now()}; ok++; got=true; state.cache.stockUpdated=Date.now(); checkAlerts(s); renderAll(); }
+      // 2) reserva: Twelve Data (se o Yahoo falhar e houver chave)
+      if(!got && key){ const mic=stockMic(s);
         const url=`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(s)}${mic?`&mic_code=${mic}`:''}&apikey=${encodeURIComponent(key)}`;
         try{ const r=await fetch(url); const d=await r.json();
-          if(d.code===401||d.code===403){auth=true;}
-          else if(d.code===429){limit=true;}
-          else { let px=parseFloat(d.close), cur=d.currency||stockHomeCur({symbol:s});
-            if(cur==='GBp'||cur==='GBX'){ px/=100; cur='GBP'; }
-            if(px>0){ state.cache.stockPrices[s]={price:px,cur,dayPct:(d.percent_change!=null&&d.percent_change!==''?parseFloat(d.percent_change):null),ts:Date.now()}; ok++; got=true; state.cache.stockUpdated=Date.now(); renderAll(); }
-          }
+          let px=parseFloat(d.close), cur=d.currency||stockHomeCur({symbol:s});
+          if(cur==='GBp'||cur==='GBX'){ px/=100; cur='GBP'; }
+          if(px>0){ state.cache.stockPrices[s]={price:px,cur,dayPct:(d.percent_change!=null&&d.percent_change!==''?parseFloat(d.percent_change):null),ts:Date.now()}; ok++; got=true; state.cache.stockUpdated=Date.now(); checkAlerts(s); renderAll(); }
         }catch(e){}
-        if(auth)break;
       }
-      if(!got){ const y=await fetchYahoo(s); if(y){ state.cache.stockPrices[s]={...y,ts:Date.now()}; ok++; state.cache.stockUpdated=Date.now(); renderAll(); } }
-      if(i<syms.length-1) await new Promise(r=>setTimeout(r, key?8000:1500)); // pausa maior se usa Twelve Data (8/min)
+      if(i<syms.length-1) await new Promise(r=>setTimeout(r,1200)); // Yahoo via proxy — pausa curta
     }
-    if(auth){toast('Chave da API inválida — verifica nas Definições',1);}
-    else if(limit&&!ok){toast('Limite da API atingido — a manter últimos preços',1);}
-    if(ok){ save(); setStatus(true); }
+    if(ok){ recordHistory(); save(); setStatus(true); }
   } finally { stockBusy=false; }
 }
 let searchT;
@@ -1298,13 +1357,30 @@ function viewPosicoes(){
         <button class="btn ghost" data-reinforce="${p.id}">＋ Reforçar</button>
         ${isStock&&!m.live?`<button class="btn ghost" data-price="${p.id}">Preço atual</button>`:''}
         <button class="btn" data-close="${p.id}">Fechar</button>
-        <button class="btn xdel" data-del="${p.id}" title="Apagar (corrigir erro)">🗑</button>
+        <button class="btn xic ${alertsFor(p.id).some(a=>a.active)?'on':''}" data-alert="${p.id}" title="Alerta de preço">🔔</button>
+        <button class="btn xic" data-del="${p.id}" title="Apagar (corrigir erro)">🗑</button>
       </div>
     </div>`;
   }).join('');
   return `<div class="sh"><h3>Posições abertas</h3><button class="btn ghost" id="btnCash">＋ Fundo / Cash</button></div><div class="plist">${cards}</div>`;
 }
 
+function historyChart(){
+  const h=(state.history||[]).slice(-90);
+  if(h.length<2) return `<div class="chartbox"><div class="chart-head"><div class="k">Evolução do património</div></div><div class="chart-empty">O gráfico desenha-se sozinho — um ponto por dia. Deixa a app registar e volta para veres a evolução da tua carteira.</div></div>`;
+  const W=680,H=170,pad=8, vals=h.map(x=>x.v), min=Math.min(...vals), max=Math.max(...vals), rng=(max-min)||1;
+  const X=i=>pad+i/(h.length-1)*(W-2*pad), Y=v=>pad+(1-(v-min)/rng)*(H-2*pad);
+  const pts=h.map((x,i)=>`${X(i).toFixed(1)},${Y(x.v).toFixed(1)}`).join(' ');
+  const area=`${pad},${H-pad} ${pts} ${(W-pad)},${H-pad}`;
+  const up=h[h.length-1].v>=h[0].v, col=up?'var(--up)':'var(--down)';
+  const chg=h[h.length-1].v-h[0].v, chgp=h[0].v>0?chg/h[0].v*100:0;
+  return `<div class="chartbox"><div class="chart-head"><div><div class="k">Evolução do património</div>
+      <div class="chg ${up?'up':'down'}">${chg>=0?'+':''}${money(chg)} · ${pct(chgp)} <span style="color:var(--muted-2);font-weight:400">· ${h.length} dias</span></div></div></div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="spark">
+      <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${up?'rgba(84,194,149,.3)':'rgba(227,123,97,.3)'}"/><stop offset="1" stop-color="rgba(0,0,0,0)"/></linearGradient></defs>
+      <polygon points="${area}" fill="url(#cg)"/><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg></div>`;
+}
 function viewPainel(){
   const a=agg();
   if(!state.positions.length&&!state.cash.length&&!state.closed.length)
@@ -1324,14 +1400,17 @@ function viewPainel(){
     <div class="brow"><div class="bl">${esc(p.name)}</div>
       <div class="bt"><i style="width:${m.valD/totA*100}%;background:${p.kind==='crypto'?'var(--brass)':'var(--indigo)'}"></i></div>
       <div class="bv ${plc}">${pct(m.plp)}</div></div>`;}).join('')||'<div class="searching">Sem posições abertas</div>';
+  // melhor/pior posição ABERTA (por %)
+  const om=state.positions.map(p=>({p,m:metrics(p)})).filter(x=>x.m.cost>0).sort((a,b)=>b.m.plp-a.m.plp);
+  const bo=om[0], wo=om[om.length-1];
   // stats
   const st=`<div class="stats">
-    <div class="tile"><div class="k">Taxa de acerto</div><div class="v">${a.closedN?a.winRate.toFixed(0)+'%':'—'}</div><div class="s">${a.closedN} trades</div></div>
-    <div class="tile"><div class="k">Melhor trade</div><div class="v ${a.best&&a.best.plp>=0?'up':'down'}" style="font-size:19px">${a.best?pct(a.best.plp):'—'}</div><div class="s">${a.best?esc(a.best.name):''}</div></div>
-    <div class="tile"><div class="k">Pior trade</div><div class="v ${a.worst&&a.worst.plp>=0?'up':'down'}" style="font-size:19px">${a.worst?pct(a.worst.plp):'—'}</div><div class="s">${a.worst?esc(a.worst.name):''}</div></div>
+    <div class="tile"><div class="k">Melhor posição</div><div class="v ${bo&&bo.m.plp>=0?'up':'down'}" style="font-size:19px">${bo?pct(bo.m.plp):'—'}</div><div class="s">${bo?esc(bo.p.name):'sem posições'}</div></div>
+    <div class="tile"><div class="k">Pior posição</div><div class="v ${wo&&wo.m.plp>=0?'up':'down'}" style="font-size:19px">${wo&&om.length>1?pct(wo.m.plp):'—'}</div><div class="s">${wo&&om.length>1?esc(wo.p.name):''}</div></div>
     <div class="tile"><div class="k">Exposição cripto</div><div class="v">${a.val>0?(a.cryptoV/a.val*100).toFixed(0)+'%':'—'}</div><div class="s">do valor em aberto</div></div>
+    <div class="tile"><div class="k">Realizado ${a.closedN?'· '+a.winRate.toFixed(0)+'% acerto':''}</div><div class="v ${a.realized>=0?'up':'down'}" style="font-size:19px">${a.closedN?money(a.realized):'—'}</div><div class="s">${a.closedN} trades fechados</div></div>
   </div>`;
-  return st+`<div class="two">
+  return historyChart()+st+`<div class="two">
     <div><div class="sh"><h3>Por plataforma</h3><span class="hint">valor atual</span></div><div class="bd">${platRows}</div></div>
     <div><div class="sh"><h3>Por ativo</h3><span class="hint">peso · rendimento</span></div><div class="bd">${assetRows}</div></div>
   </div>`;
@@ -1614,6 +1693,23 @@ function modalReinforce(id){
     p.lots.push({shares:v.units,cost:v.cost,priceQ:v.priceQ,priceCur:v.priceCur,date:$('#rDate').value});
     save(); closeM(); renderAll(); toast('Reforço adicionado — média recalculada'); };
 }
+function modalAlert(id){
+  const p=state.positions.find(x=>x.id===id); if(!p)return;
+  const pi=priceInfo(p), cur=pi.cur, cs=sym(cur).trim();
+  const list=alertsFor(id);
+  openM(`<div class="mh"><h3>Alertas · ${esc(p.name)}</h3><button class="x" onclick="closeM()">✕</button></div>
+    <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">Preço atual: <b style="color:var(--text)">${pi.price>0?price(pi.price,cur):'—'}</b>${pi.live?'':' <span style="color:var(--muted-2)">(sem cotação ao vivo)</span>'}. Aviso-te quando o preço passar o alvo.</p>
+    <div class="mseg" id="alDir" style="margin-bottom:12px"><button data-d="above" class="on">▲ Sobe até</button><button data-d="below">▼ Desce até</button></div>
+    <div class="row2"><div class="field"><label>Preço-alvo (${cs})</label><input class="inp mono" id="alPrice" type="number" step="any" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field" style="display:flex;align-items:flex-end"><button class="btn pri" id="alAdd" style="width:100%;justify-content:center;padding:11px">Criar alerta</button></div></div>
+    ${list.length?`<div class="sep"></div><div style="font-size:12.5px;color:var(--muted-2);margin-bottom:8px">Alertas definidos</div>${list.map(a=>`<div class="set-row"><div class="sl">${a.above?'▲':'▼'} ${price(a.price,a.cur)} ${a.active?'<span style="color:var(--up);font-size:11px">● ativo</span>':'<span style="color:var(--muted-2);font-size:11px">disparado</span>'}</div><button class="x danger" data-dela="${a.id}">✕</button></div>`).join('')}`:''}`);
+  let dir='above';
+  $('#alDir').onclick=e=>{const b=e.target.closest('button');if(!b)return;dir=b.dataset.d;[...$('#alDir').children].forEach(x=>x.classList.toggle('on',x===b));};
+  $('#alAdd').onclick=async()=>{const v=parseFloat($('#alPrice').value); if(!(v>0))return toast('Mete o preço-alvo',1);
+    try{ if('Notification' in window && Notification.permission==='default') await Notification.requestPermission(); }catch(e){}
+    state.alerts.push({id:uid(),posId:id,name:p.name,cur,above:dir==='above',price:v,active:true}); save(); modalAlert(id); renderAll(); toast('Alerta criado');};
+  modalEl.querySelectorAll('[data-dela]').forEach(b=>b.onclick=()=>{state.alerts=state.alerts.filter(a=>a.id!==b.dataset.dela);save();modalAlert(id);renderAll();});
+}
 function modalClose(id){
   const p=state.positions.find(x=>x.id===id); if(!p)return;
   const m=metrics(p), exCur=m.nativeCur, prefill=m.nativePrice;
@@ -1719,6 +1815,12 @@ function modalCashEntry(id){
 function modalSettings(){
   const fx=fxRate();
   openM(`<div class="mh"><h3>Definições</h3><button class="x" onclick="closeM()">✕</button></div>
+    <div class="set-sec">🎨 Aspeto</div>
+    <div class="field"><label>Fundo animado</label>
+      <div class="bgrid">${BGS.map(b=>`<button class="bgchip${(state.settings.bgStyle||'aurora')===b.id?' on':''}" onclick="setBgStyle('${b.id}')"><span class="bgico">${b.i}</span><span>${b.n}</span></button>`).join('')}</div></div>
+    <div class="field" style="margin-top:14px"><label>Cor de destaque</label>
+      <div class="acrow">${ACCENTS.map(c=>`<button class="acchip${(state.settings.accent||'gold')===c.id?' on':''}" onclick="applyAccent('${c.id}')" title="${c.n}" style="--ac:${c.a}"><span class="acdot"></span></button>`).join('')}</div></div>
+    <div class="sep"></div>
     <div class="set-row"><div><div class="sl">Moeda principal</div><div class="sd">Como o património é mostrado</div></div>
       <div class="seg"><button data-sc="EUR" class="${disp()==='EUR'?'on':''}">€</button><button data-sc="USD" class="${disp()==='USD'?'on':''}">$</button></div></div>
     <div class="sep"></div>
@@ -1730,13 +1832,13 @@ function modalSettings(){
       <input class="inp mono" id="sFee" type="number" step="any" value="${(state.settings.fxFeePct||0)}" placeholder="0,5">
       <div class="sd" style="margin-top:6px">Taxa de câmbio ao comprar/vender ações em moeda diferente da compra. Aplica-se à <b>XTB</b> (0,5%). A <b>Trade Republic</b> e a <b>Revolut</b> ficam isentas automaticamente. Põe 0 para desligar em todo o lado.</div></div>
     <div class="sep"></div>
-    <div class="field"><label>Cotações de ações ao vivo <span class="lnk" id="getKey">obter chave grátis →</span></label>
-      <input class="inp mono" id="sKey" value="${esc(state.settings.apiKey||'')}" placeholder="cola aqui a tua chave Twelve Data" autocomplete="off">
-      <div class="sd" style="margin-top:6px">${(state.settings.apiKey||'').trim()?'<span style="color:var(--up)">● Ativo.</span> Ações e ETFs dos EUA e da Europa atualizam sozinhos (Europa com ~15 min de atraso). Se alguma ficar em manual, diz-me a bolsa.':'Sem chave, as ações ficam em manual. A cripto está sempre ao vivo. Regista-te grátis no Twelve Data, copia a chave (API key) e cola aqui — cobre EUA e Europa.'}</div></div>
-    <div class="sep"></div>
-    <div class="field"><label>Atalho de cotações (avançado)</label>
+    <div class="field"><label>Atalho de cotações (tempo real)</label>
       <input class="inp mono" id="sProxy" value="${esc(state.settings.proxyUrl||'')}" placeholder="https://o-teu-atalho.workers.dev" autocomplete="off">
-      <div class="sd" style="margin-top:6px">${(state.settings.proxyUrl||'').trim()?'<span style="color:var(--up)">● Atalho próprio ativo</span> — as ETFs europeias apanham cotação de forma fiável.':'Para as ETFs europeias (Xetra) nunca falharem, cola aqui o teu atalho Cloudflare (grátis, 3 min a criar). Sem isto, a app tenta intermediários públicos, que às vezes falham.'}</div></div>
+      <div class="sd" style="margin-top:6px">${(state.settings.proxyUrl||'').trim()?'<span style="color:var(--up)">● Atalho ativo</span> — todas as ações e ETFs leem cotações do Yahoo por aqui, praticamente em tempo real.':'Cola o teu atalho Cloudflare (grátis, 3 min a criar). Com ele, <b>todas</b> as ações e ETFs ficam ao vivo pelo Yahoo, muito perto do tempo real. Sem ele, a app tenta intermediários públicos, que às vezes falham.'}</div></div>
+    <div class="sep"></div>
+    <div class="field"><label>Chave Twelve Data <span class="sublbl">reserva, opcional</span> <span class="lnk" id="getKey">obter →</span></label>
+      <input class="inp mono" id="sKey" value="${esc(state.settings.apiKey||'')}" placeholder="opcional — só como reserva" autocomplete="off">
+      <div class="sd" style="margin-top:6px">${(state.settings.apiKey||'').trim()?'<span style="color:var(--up)">● Reserva ativa.</span> Só entra se o Yahoo não responder para alguma ação.':'Opcional. Só é usada como reserva se o Yahoo falhar para alguma ação. Com o atalho acima, raramente é precisa.'}</div></div>
     <div class="sep"></div>
     <div class="field"><label>Atualização automática das ações</label>
       <div class="mseg cur5" id="sRefresh">${[[0,'Manual'],[1,'1 min'],[5,'5 min'],[15,'15 min']].map(o=>`<button data-m="${o[0]}" class="${(state.settings.refreshMin||0)===o[0]?'on':''}">${o[1]}</button>`).join('')}</div>
@@ -1792,6 +1894,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
   if(t.id==='btnCash')modalCash();
   if(t.id==='goPos'){tab='posicoes';document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab==='posicoes'));renderView();}
   if(t.dataset.close)modalClose(t.dataset.close);
+  if(t.dataset.alert)modalAlert(t.dataset.alert);
   if(t.dataset.del){ const p=state.positions.find(x=>x.id===t.dataset.del); if(p&&confirm(`Apagar "${p.name}"?\n\nÉ removida já e NÃO fica no histórico. Usa isto só para corrigir erros — para uma venda a sério, usa Fechar.`)){ state.positions=state.positions.filter(x=>x.id!==t.dataset.del); save(); renderAll(); toast('Posição apagada'); } }
   if(t.dataset.price)modalStockPrice(t.dataset.price);
   if(t.dataset.reinforce)modalReinforce(t.dataset.reinforce);
@@ -1801,7 +1904,7 @@ document.addEventListener('click',e=>{const s=e.target.closest('.nent');if(!s)re
   if(box)box.style.display=box.style.display==='none'?'flex':'none';});
 
 /* ---------- arranque ---------- */
-load(); renderAll();
+load(); applyAccent(state.settings.accent,true); renderAll();
 setStatus(!!(state.cache.updated||state.cache.stockUpdated));
 let stockTimer=null;
 function startStockAuto(){ if(stockTimer)clearInterval(stockTimer); const m=state.settings.refreshMin; if(!m)return;
@@ -1812,34 +1915,53 @@ startStockAuto();
 setInterval(fetchFx,1800000);
 setInterval(()=>setStatus(true),30000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ fetchFx().then(()=>{fetchPrices();fetchStockPrices();}); } });
-// ══ Aurora boreal (canvas) — fundo vivo e subtil, pausa quando escondido ══
+// ══ Fundo animado (canvas) — Aurora / Rede / Estrelas / Nebulosa / Nenhum ══
 (function(){
   var cv=document.getElementById('aurC'); if(!cv||!cv.getContext) return;
   var ctx=cv.getContext('2d'), W=0,H=0, dpr=Math.min(window.devicePixelRatio||1,2), t=0, raf=null;
   var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var bands=[[201,169,106],[95,199,154],[124,108,224],[92,150,210]]; // dourado, jade, violeta, azul
-  function size(){ W=cv.clientWidth; H=cv.clientHeight; cv.width=Math.max(1,W*dpr); cv.height=Math.max(1,H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); }
-  function frame(){
-    t+=16; ctx.clearRect(0,0,W,H);
-    for(var b=0;b<bands.length;b++){
-      var c=bands[b], yBase=H*(0.14+b*0.15), amp=H*0.15, sp=t*0.0005*(1+b*0.22), fx=b*1.3;
+  var pts=[],stars=[],blobs=[];
+  function accent(){ try{ return (getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb')||'').trim()||'201,169,106'; }catch(e){ return '201,169,106'; } }
+  function mode(){ return (state.settings&&state.settings.bgStyle)||'aurora'; }
+  function size(){ W=cv.clientWidth; H=cv.clientHeight; cv.width=Math.max(1,W*dpr); cv.height=Math.max(1,H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); seed(); }
+  function seed(){
+    var n=Math.min(60,Math.round(W*H/24000)); pts=[]; for(var i=0;i<n;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.22,vy:(Math.random()-.5)*.22,r:Math.random()*1.5+.5});
+    var sc=Math.min(120,Math.round(W*H/12000)); stars=[]; for(var j=0;j<sc;j++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.3,ph:Math.random()*6.283,sp:Math.random()*.7+.2});
+    blobs=[]; for(var k=0;k<5;k++)blobs.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*160+140,dx:(Math.random()-.5)*.12,dy:(Math.random()-.5)*.12,h:Math.random()*360});
+  }
+  var bands=[[201,169,106],[95,199,154],[124,108,224],[92,150,210]];
+  function drawAurora(){ ctx.clearRect(0,0,W,H); var ac=accent().split(',').map(Number); if(ac.length===3&&!isNaN(ac[0]))bands[0]=ac;
+    for(var b=0;b<bands.length;b++){ var c=bands[b], yBase=H*(0.14+b*0.15), amp=H*0.15, sp=t*0.0005*(1+b*0.22), fx=b*1.3;
       ctx.beginPath(); ctx.moveTo(0,H);
       for(var x=0;x<=W;x+=16){ var y=yBase+Math.sin(x*0.0055+sp+fx)*amp+Math.sin(x*0.012+sp*1.4)*amp*0.4; ctx.lineTo(x,y); }
       ctx.lineTo(W,H); ctx.closePath();
-      var g=ctx.createLinearGradient(0,yBase-amp,0,H);
-      g.addColorStop(0,'rgba('+c[0]+','+c[1]+','+c[2]+',0.15)');
-      g.addColorStop(0.5,'rgba('+c[0]+','+c[1]+','+c[2]+',0.05)');
-      g.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=g; ctx.fill();
-    }
-    if(!reduce) raf=requestAnimationFrame(frame);
-  }
-  function start(){ if(!raf&&!reduce&&!document.hidden) raf=requestAnimationFrame(frame); }
+      var g=ctx.createLinearGradient(0,yBase-amp,0,H); g.addColorStop(0,'rgba('+c[0]+','+c[1]+','+c[2]+',0.15)'); g.addColorStop(0.5,'rgba('+c[0]+','+c[1]+','+c[2]+',0.05)'); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.fill(); } }
+  function drawNet(){ var col=accent(); ctx.clearRect(0,0,W,H);
+    for(var i=0;i<pts.length;i++){ var p=pts[i]; p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1;
+      for(var j=i+1;j<pts.length;j++){ var q=pts[j],dx=p.x-q.x,dy=p.y-q.y,d=dx*dx+dy*dy; if(d<13000){ var a=(1-d/13000)*.28; ctx.strokeStyle='rgba('+col+','+a+')'; ctx.lineWidth=.6; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke(); } } }
+    for(var m=0;m<pts.length;m++){ ctx.fillStyle='rgba('+col+',.6)'; ctx.beginPath(); ctx.arc(pts[m].x,pts[m].y,pts[m].r,0,6.283); ctx.fill(); } }
+  function drawStars(){ ctx.clearRect(0,0,W,H); var col=accent();
+    for(var i=0;i<stars.length;i++){ var s=stars[i]; var tw=(Math.sin(t*0.002*s.sp+s.ph)+1)*.5; s.y+=0.03*s.sp; if(s.y>H)s.y=0;
+      ctx.fillStyle='rgba(255,255,255,'+(0.2+tw*0.6)+')'; ctx.beginPath(); ctx.arc(s.x,s.y,s.r*(0.6+tw*0.7),0,6.283); ctx.fill(); }
+    for(var g=0;g<stars.length;g+=6){ var s2=stars[g]; var pp=(Math.sin(t*0.003+s2.ph)+1)*.5; ctx.fillStyle='rgba('+col+','+(0.3+pp*0.5)+')'; ctx.beginPath(); ctx.arc(s2.x,s2.y,s2.r*(1+pp),0,6.283); ctx.fill(); } }
+  function drawNebula(){ ctx.clearRect(0,0,W,H); ctx.globalCompositeOperation='lighter';
+    for(var i=0;i<blobs.length;i++){ var bb=blobs[i]; bb.x+=bb.dx*3; bb.y+=bb.dy*3;
+      if(bb.x<-bb.r)bb.x=W+bb.r; if(bb.x>W+bb.r)bb.x=-bb.r; if(bb.y<-bb.r)bb.y=H+bb.r; if(bb.y>H+bb.r)bb.y=-bb.r;
+      var pulse=1+Math.sin(t*0.012+i*1.7)*0.22, R=bb.r*pulse, hue=(bb.h+t*0.1)%360;
+      var g=ctx.createRadialGradient(bb.x,bb.y,0,bb.x,bb.y,R); g.addColorStop(0,'hsla('+hue+',75%,60%,0.22)'); g.addColorStop(0.5,'hsla('+((hue+40)%360)+',70%,55%,0.10)'); g.addColorStop(1,'hsla(0,0%,0%,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(bb.x,bb.y,R,0,6.283); ctx.fill(); }
+    ctx.globalCompositeOperation='source-over'; }
+  function frame(){ t+=16; var mo=mode();
+    if(mo==='none'){ ctx.clearRect(0,0,W,H); }
+    else if(mo==='net')drawNet(); else if(mo==='stars')drawStars(); else if(mo==='nebula')drawNebula(); else drawAurora();
+    if(!reduce&&mo!=='none')raf=requestAnimationFrame(frame); else raf=null; }
+  function start(){ if(!raf&&!document.hidden){ if(mode()==='none'){ ctx.clearRect(0,0,W,H); } else if(reduce){ frame(); } else { raf=requestAnimationFrame(frame); } } }
   function stop(){ if(raf){ cancelAnimationFrame(raf); raf=null; } }
+  window.setBgStyle=function(s){ if(state.settings){ state.settings.bgStyle=s; save(); } stop(); ctx.clearRect(0,0,W,H); start(); if(typeof modalSettings==='function'&&document.querySelector('.modal'))modalSettings(); };
   window.addEventListener('resize',size);
   document.addEventListener('visibilitychange',function(){ if(document.hidden) stop(); else start(); });
-  size();
-  if(reduce) frame(); else start();
+  size(); start();
 })();
 
 (function(){
