@@ -1226,10 +1226,10 @@ function yhWraps(t){ // ordem: proxy próprio (fiável) primeiro, depois públic
 function yhParse(d,sym){ const m=d?.chart?.result?.[0]?.meta; if(!m||!(m.regularMarketPrice>0))return null;
   let px=m.regularMarketPrice, cur=m.currency||stockHomeCur({symbol:sym});
   if(cur==='GBp'||cur==='GBX'){ px/=100; cur='GBP'; }
-  const prev=m.chartPreviousClose||m.previousClose;
+  const prev=(m.previousClose!=null?m.previousClose:m.chartPreviousClose);
   return {price:px, cur, dayPct:(prev>0?(px-prev)/prev*100:null)}; }
 async function fetchYahoo(sym){ // cobre ETFs europeias que a Twelve Data grátis não dá
-  const target=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym(sym))}?interval=1d&range=5d`;
+  const target=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym(sym))}?interval=1d&range=1d`;
   for(const u of yhWraps(target)){
     try{ const r=await fetch(u); if(!r.ok)continue; const txt=await r.text(); let d; try{ d=JSON.parse(txt); }catch{ continue; }
       const q=yhParse(d,sym); if(q)return q;
