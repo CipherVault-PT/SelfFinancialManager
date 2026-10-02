@@ -13,6 +13,7 @@ import { modalSettings, configureSettings } from './ui/modal-settings.js';
 import { modalTax } from './ui/modal-tax.js';
 import { modalDividend } from './ui/modal-dividend.js';
 import { removeDividend } from './dividends.js';
+import { modalClassify } from './ui/modal-classify.js';
 import { initPWA } from './pwa.js';
 
 load();
@@ -76,6 +77,8 @@ const ACTIONS = {
     renderView();
   },
   'chart-range': (_, el) => { ui.chartDays = +el.dataset.days; renderView(); },
+  'alloc-dim': (_, el) => { ui.allocDim = el.dataset.dim; renderView(); },
+  classify: modalClassify,
   'backup-now': async () => {
     if (!(await saveBackup())) return;
     commit();

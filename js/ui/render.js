@@ -4,6 +4,8 @@ import { disp, conv, fxRate } from '../fx.js';
 import { agg, metrics, closedM, avgDisp, cashBal, pCost } from '../calc.js';
 import { alertsFor } from '../alerts.js';
 import { dividendTotal, dividendStats, netOf } from '../dividends.js';
+import { allocation, concentration, unclassified, UNKNOWN, CRYPTO } from '../allocation.js';
+import { FLAGS } from '../data/classification.js';
 import { net } from '../quotes/index.js';
 import { backupDue, daysSinceBackup } from '../backup.js';
 import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } from '../format.js';
@@ -13,7 +15,7 @@ const CLR = { crypto: 'var(--brass)', stock: 'var(--indigo)', cash: 'var(--slate
 const platClass = p => PLATFORM_CLASS[p] ?? '';
 const upDown = v => (v >= 0 ? 'up' : 'down');
 
-export const ui = { tab: 'painel', chartDays: 90, expanded: new Set() };
+export const ui = { tab: 'painel', chartDays: 90, expanded: new Set(), allocDim: 'sector' };
 
 export function renderAll() {
   const a = agg();
@@ -224,7 +226,34 @@ function viewDashboard(a) {
   return `${backupBanner()}${historyChart()}${stats}<div class="two">
     <div><div class="sh"><h3>Por plataforma</h3><span class="hint">valor atual</span></div><div class="bd">${platRows}</div></div>
     <div><div class="sh"><h3>Por ativo</h3><span class="hint">peso · rendimento</span></div><div class="bd">${assetRows}</div></div>
-  </div>`;
+  </div>${allocationSection(d)}`;
+}
+
+const ALLOC_DIMS = [['sector', 'Setor'], ['country', 'País'], ['currency', 'Moeda']];
+const ALLOC_CLR = { sector: 'var(--brass)', country: 'var(--indigo)', currency: 'var(--up)' };
+const allocLabel = (dim, k) =>
+  k === CRYPTO ? '₿ Cripto' : k === 'ETF (diversificado)' ? 'ETFs' : dim === 'country' && FLAGS[k] ? `${FLAGS[k]} ${k}` : k;
+
+function allocationSection(d) {
+  if (!state.positions.length) return '';
+  const dim = ui.allocDim;
+  const al = allocation(dim, d);
+  const conc = concentration(al);
+  const missing = dim !== 'currency' ? unclassified().length : 0;
+  const rows = al.rows.map(r => `
+    <div class="brow" title="${esc(money(r.value, d))}"><div class="bl">${esc(allocLabel(dim, r.key))}</div>
+      <div class="bt"><i style="width:${r.pct}%;background:${r.key === UNKNOWN ? 'var(--slate)' : ALLOC_CLR[dim]}"></i></div>
+      <div class="bv">${r.pct.toFixed(r.pct < 10 ? 1 : 0).replace('.', ',')}%</div></div>`).join('');
+  const notes = [
+    conc && `<span class="warn">Concentração: ${conc.pct.toFixed(0)}% ${dim === 'currency' ? 'fora do euro' : `em ${esc(allocLabel(dim, conc.key))}`}.</span>`,
+    missing && `${plural(missing, 'ação sem', 'ações sem')} setor ou país — <button class="lnk" data-action="classify">classificar</button>`,
+    dim === 'currency' && 'Moeda de cotação de cada ativo, mais os fundos/cash. ETFs globais estão expostos a várias moedas.',
+  ].filter(Boolean);
+  return `<div class="sh"><h3>Distribuição</h3><div class="sh-r"><div class="seg chart-seg">${ALLOC_DIMS.map(([k, l]) =>
+      `<button data-action="alloc-dim" data-dim="${k}" class="${dim === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <button class="btn ghost sm icon-only" data-action="classify" title="Editar setor e país" aria-label="Editar setor e país">✎</button></div></div>
+    <div class="bd">${rows || '<div class="searching">—</div>'}
+      ${notes.length ? `<div class="alloc-notes">${notes.map(n => `<div>${n}</div>`).join('')}</div>` : ''}</div>`;
 }
 
 function divTile(d) {

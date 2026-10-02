@@ -426,3 +426,13 @@ button.lnk{background:none;border:0;padding:0;font:inherit;float:none;color:var(
 .pos-act .acts-main{display:flex;gap:8px;flex:1 1 210px;min-width:0}
 .pos-act .acts-main .btn{flex:1;justify-content:center;padding:7px 8px}
 .pos-act .acts-ic{display:flex;gap:8px;margin-left:auto}
+
+/* --- v2.4: distribuição --- */
+.alloc-notes{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:5px}
+.alloc-notes .warn{color:var(--brass-2)}
+.btn.icon-only{padding:5px 9px}
+.clist{display:flex;flex-direction:column;gap:12px}
+.crow{background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.crow-n{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:14px}
+.crow .inp{font-size:14px;padding:10px 32px 10px 11px}
+@media(min-width:760px){.brow .bl{width:150px}}
