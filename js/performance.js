@@ -64,11 +64,21 @@ export function cashFlows() {
     if (c.closedAt) flows.push({ d: c.closedAt, v: conv(closedM(c, c.currency).proceeds, c.currency, 'EUR') });
   }
   for (const x of state.dividends) flows.push({ d: x.date, v: conv(netOf(x), x.currency, 'EUR') });
-  flows.sort((a, b) => a.d.localeCompare(b.d));
+  flows.sort((a, b) => a.d.localeCompare(b.d) || b.v - a.v);
   return { flows: flows.filter(f => Number.isFinite(f.v) && f.v !== 0), missingDates };
 }
 
 export const firstBuyDate = () => cashFlows().flows.find(f => f.v < 0)?.d ?? null;
+
+/**
+ * Capital máximo que esteve investido ao mesmo tempo (compras menos o que já tinha voltado).
+ * Com muitas compras e vendas, a soma das compras conta o mesmo dinheiro várias vezes.
+ */
+export function peakCapital(flows) {
+  let net = 0, peak = 0;
+  for (const f of flows) { net -= f.v; peak = Math.max(peak, net); }
+  return peak;
+}
 
 /** Rentabilidade da carteira (em EUR): ganho total e TIR anual desde a primeira compra. */
 export function performance(today = todayISO()) {
@@ -82,9 +92,10 @@ export function performance(today = todayISO()) {
   const start = buys[0].d, days = Math.max(0, daysBetween(start, today));
   const withEnd = value > 0 ? [...flows, { d: today, v: value }] : flows;
   const annual = days >= MIN_DAYS ? xirr(withEnd) : null;
+  const capital = peakCapital(flows);
   return {
-    start, days, invested, received, value, gain, missingDates, annual, flows,
-    totalPct: invested > 0 ? (gain / invested) * 100 : 0,
+    start, days, invested, received, value, gain, missingDates, annual, flows, capital,
+    totalPct: capital > 0 ? (gain / capital) * 100 : 0,
     rate: shownRate(annual, days),
   };
 }

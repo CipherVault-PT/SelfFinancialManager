@@ -73,6 +73,7 @@ function normalizeLot(l) {
     priceQ: n(l.priceQ) > 0 ? n(l.priceQ) : null,
     priceCur: l.priceCur || null,
     date: l.date || '',
+    ...(typeof l.src === 'string' && l.src ? { src: l.src } : {}),
   };
 }
 
@@ -97,6 +98,7 @@ function normalizeDividend(x) {
     id: String(x.id || uid()), posId: x.posId || null, name: String(x.name || ''), symbol: String(x.symbol || ''),
     platform: String(x.platform || ''), date: String(x.date || ''), currency: x.currency || 'EUR',
     gross: n(x.gross), withheld: Math.max(0, n(x.withheld)),
+    ...(typeof x.src === 'string' && x.src ? { src: x.src } : {}),
   };
 }
 

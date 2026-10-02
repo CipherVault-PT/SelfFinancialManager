@@ -441,3 +441,28 @@ button.lnk{background:none;border:0;padding:0;font:inherit;float:none;color:var(
 .stats.perf{margin-bottom:8px}
 .perf-notes{font-size:12px;color:var(--muted-2);line-height:1.5;margin:0 2px 22px;display:flex;flex-direction:column;gap:4px}
 .perf-notes .warn{color:var(--brass-2)}
+
+/* --- v2.6: importar extratos --- */
+.empty .empty-alt{display:block;margin:14px auto 0;font-size:13px}
+.imp-brokers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.imp-b{border:1px solid var(--brass);border-radius:12px;padding:10px;text-align:center;display:flex;flex-direction:column;gap:2px;font-size:13.5px}
+.imp-b span{font-size:11.5px;color:var(--muted-2)}
+.imp-b.off{border-color:var(--line);opacity:.55}
+.imp-how{font-size:12.5px;color:var(--muted);line-height:1.5;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:14px}
+.imp-how b{color:var(--text)}
+.imp-err{font-size:13px;color:var(--down);background:rgba(227,123,97,.08);border:1px solid rgba(227,123,97,.3);border-radius:12px;padding:10px 12px;margin-bottom:14px;line-height:1.45}
+.imp-err.warn{color:var(--brass-2);background:rgba(201,169,110,.08);border-color:rgba(201,169,110,.3);margin:12px 0 0}
+.imp-pick.busy{opacity:.6;pointer-events:none}
+.imp-meta{font-size:13px;color:var(--muted);margin-bottom:12px}
+.imp-meta b{color:var(--text)}
+.imp-list{display:flex;flex-direction:column;gap:8px}
+.imp-row{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.imp-row small{display:block;color:var(--muted-2);font-size:12px;margin-top:2px}
+.imp-row.muted{color:var(--muted)}
+.imp-row.warn{color:var(--brass-2)}
+.imp-ic{flex:none;width:20px;text-align:center}
+.imp-opts{display:flex;flex-direction:column;gap:8px}
+.imp-opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;font-size:13.5px}
+.imp-opt:has(input:checked){border-color:var(--brass)}
+.imp-opt input{margin-top:3px;accent-color:var(--brass)}
+.imp-opt small{display:block;color:var(--muted-2);font-size:12px;margin-top:2px}

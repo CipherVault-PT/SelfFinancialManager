@@ -14,6 +14,7 @@ import { modalTax } from './ui/modal-tax.js';
 import { modalDividend } from './ui/modal-dividend.js';
 import { removeDividend } from './dividends.js';
 import { modalClassify } from './ui/modal-classify.js';
+import { modalImport } from './ui/modal-import.js';
 import { initPWA } from './pwa.js';
 
 load();
@@ -54,6 +55,7 @@ async function manualRefresh() {
 const ACTIONS = {
   add: modalAdd,
   cash: modalCash,
+  import: () => modalImport(),
   settings: modalSettings,
   refresh: manualRefresh,
   'modal-close': closeModal,

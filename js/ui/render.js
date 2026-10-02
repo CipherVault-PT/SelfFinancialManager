@@ -84,9 +84,11 @@ export function renderStatus() {
   $('#btnRefresh').classList.toggle('spin', net.busy > 0 && net.manual);
 }
 
-function empty(title, text, btn, action) {
-  return `<div class="empty"><div class="ei"></div><h4>${title}</h4><p>${text}</p><button class="btn pri" data-action="${action}">${btn}</button></div>`;
+function empty(title, text, btn, action, alt = null) {
+  return `<div class="empty"><div class="ei"></div><h4>${title}</h4><p>${text}</p><button class="btn pri" data-action="${action}">${btn}</button>${alt ? `<button class="lnk empty-alt" data-action="${alt[1]}">${alt[0]}</button>` : ''}</div>`;
 }
+
+const IMPORT_ALT = ['ou importa o extrato da XTB', 'import'];
 
 function liveTag(p, m) {
   if (m.live) {
@@ -155,9 +157,9 @@ function positionCard(p) {
 
 function viewPositions() {
   if (!state.positions.length) {
-    return empty('Ainda sem posições', 'Regista a tua primeira entrada. A app calcula as unidades, o lucro ao vivo e a percentagem — tudo por ti.', 'Adicionar posição', 'add');
+    return empty('Ainda sem posições', 'Regista a tua primeira entrada. A app calcula as unidades, o lucro ao vivo e a percentagem — tudo por ti.', 'Adicionar posição', 'add', IMPORT_ALT);
   }
-  return `<div class="sh"><h3>Posições abertas</h3><button class="btn ghost" data-action="cash">＋ Fundo / Cash</button></div>
+  return `<div class="sh"><h3>Posições abertas</h3><div class="sh-r"><button class="btn ghost" data-action="import" title="Importar extrato da corretora">📄 Extrato</button><button class="btn ghost" data-action="cash">＋ Fundo / Cash</button></div></div>
     <div class="plist">${state.positions.map(positionCard).join('')}</div>`;
 }
 
@@ -192,7 +194,7 @@ function historyChart() {
 
 function viewDashboard(a) {
   if (!state.positions.length && !state.cash.length && !state.closed.length) {
-    return empty('Bem-vindo à Aurora', 'A tua carteira toda num sítio — cripto, ações e ETFs da Revolut, XTB e Trade Republic, ao vivo. Começa por registar uma posição.', 'Adicionar primeira posição', 'add');
+    return empty('Bem-vindo à Aurora', 'A tua carteira toda num sítio — cripto, ações e ETFs da Revolut, XTB e Trade Republic, ao vivo. Começa por registar uma posição.', 'Adicionar primeira posição', 'add', IMPORT_ALT);
   }
   const d = disp();
   const rows = state.positions.map(p => ({ p, m: metrics(p) }));
@@ -284,7 +286,7 @@ function performanceSection(d) {
   ].filter(Boolean);
   return `<div class="sh"><h3>Rentabilidade</h3><span class="hint">desde ${esc(pf.start)} · ${span(pf.days)}</span></div>
     <div class="stats perf">
-      ${tile('Ganho total', signed(pf.gain, money(toD(pf.gain), d)), `${pct(pf.totalPct)} sobre ${money(toD(pf.invested), d)}`, upDown(pf.gain))}
+      ${tile('Ganho total', signed(pf.gain, money(toD(pf.gain), d)), `${pct(pf.totalPct)} · capital ${money(toD(pf.capital), d)}`, upDown(pf.gain))}
       ${tile(annualised ? 'Por ano' : 'No período', ratePct(pf.rate), pf.rate == null ? `ao fim de ${MIN_DAYS} dias` : 'a tua carteira', pf.rate != null ? upDown(pf.rate) : '')}
       ${benchTile}
       ${tile('Diferença', diff == null ? '—' : `${diff >= 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} p.p.`, diff == null ? 'face ao índice' : diff >= 0 ? `à frente do ${BENCHMARK.name}` : `atrás do ${BENCHMARK.name}`, diff == null ? '' : upDown(diff))}
