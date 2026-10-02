@@ -3,6 +3,7 @@ import { state } from '../store.js';
 import { disp, conv, fxRate } from '../fx.js';
 import { agg, metrics, closedM, avgDisp, cashBal, pCost } from '../calc.js';
 import { alertsFor } from '../alerts.js';
+import { dividendTotal, dividendStats, netOf } from '../dividends.js';
 import { net } from '../quotes/index.js';
 import { backupDue, daysSinceBackup } from '../backup.js';
 import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } from '../format.js';
@@ -30,8 +31,8 @@ function renderHero(a) {
   $('#nw').innerHTML = `<span class="cur">${esc(symbol)}</span>${esc(int)}<span class="dec">${esc(dec)}</span>`;
 
   $('#heroSub').innerHTML = state.positions.length
-    ? `<span class="chg ${a.dayChange >= 0 ? 'pos' : 'neg'}"><span class="arw">${a.dayChange >= 0 ? '▲' : '▼'}</span><span class="lbl">Hoje</span> ${signed(a.dayChange, money(a.dayChange, d))} <span>(${pct(a.dayP)})</span></span>
-       <span class="chg ${a.unreal >= 0 ? 'pos' : 'neg'}" style="background:transparent"><span class="lbl">Não realizado</span> ${signed(a.unreal, money(a.unreal, d))} <span>(${pct(a.unrealP)})</span></span>`
+    ? `<span class="chg ${a.dayChange >= 0 ? 'gain' : 'loss'}"><span class="arw">${a.dayChange >= 0 ? '▲' : '▼'}</span><span class="lbl">Hoje</span> ${signed(a.dayChange, money(a.dayChange, d))} <span>(${pct(a.dayP)})</span></span>
+       <span class="chg ${a.unreal >= 0 ? 'gain' : 'loss'}" style="background:transparent"><span class="lbl">Não realizado</span> ${signed(a.unreal, money(a.unreal, d))} <span>(${pct(a.unrealP)})</span></span>`
     : `<span class="chg" style="background:var(--surface-2);color:var(--muted)"><span class="lbl">Sem posições abertas — adiciona a primeira</span></span>`;
 
   const tot = a.cryptoV + a.stockV + a.cashV;
@@ -112,6 +113,8 @@ function positionCard(p) {
       }).join('')}
     </div>` : '';
   const hasAlert = alertsFor(p.id).some(a => a.active);
+  const divNet = isStock ? dividendTotal(p.id, p.currency) : 0;
+  const totalRet = m.cost > 0 ? ((m.plPos + divNet) / m.cost) * 100 : 0;
   return `<article class="pos ${st}">
     <div class="pos-top">
       <div class="tkn">${icon}</div>
@@ -130,13 +133,19 @@ function positionCard(p) {
       <div class="pg"><span class="gk">Custo · Valor</span><span class="gv">${money(m.cost, p.currency)} · ${money(m.valPos, p.currency)}</span></div>
       <div class="pg"><span class="gk">Cotação ${esc(m.nativeCur)}</span><span class="gv">${price(m.nativePrice, m.nativeCur)}</span></div>
     </div>
+    ${divNet ? `<div class="divline">💰 Dividendos <b class="up">${signed(divNet, money(divNet, p.currency))}</b> · retorno total <b class="${upDown(totalRet)}">${pct(totalRet)}</b></div>` : ''}
     ${lotsHtml}
     <div class="pos-act">
-      <button class="btn ghost" data-action="reinforce" data-id="${id}">＋ Reforçar</button>
-      ${isStock && !m.live ? `<button class="btn ghost" data-action="price" data-id="${id}">Preço atual</button>` : ''}
-      <button class="btn" data-action="close" data-id="${id}">Vender</button>
+      <div class="acts-main">
+        <button class="btn ghost" data-action="reinforce" data-id="${id}">＋ Reforçar</button>
+        ${isStock && !m.live ? `<button class="btn ghost" data-action="price" data-id="${id}">Preço atual</button>` : ''}
+        <button class="btn" data-action="close" data-id="${id}">Vender</button>
+      </div>
+      <div class="acts-ic">
+      ${isStock ? `<button class="btn xic ${divNet ? 'on' : ''}" data-action="dividend" data-id="${id}" title="Dividendos" aria-label="Dividendos">💰</button>` : ''}
       <button class="btn xic ${hasAlert ? 'on' : ''}" data-action="alert" data-id="${id}" title="Alerta de preço" aria-label="Alertas de preço">🔔</button>
       <button class="btn xic" data-action="delete" data-id="${id}" title="Apagar (corrigir erro)" aria-label="Apagar posição">🗑</button>
+      </div>
     </div>
   </article>`;
 }
@@ -209,12 +218,19 @@ function viewDashboard(a) {
     ${tile('Pior posição', worst ? pct(worst.m.plp) : '—', worst ? esc(worst.p.name) : '', worst ? upDown(worst.m.plp) : '')}
     ${tile('Exposição cripto', a.val > 0 ? `${((a.cryptoV / a.val) * 100).toFixed(0)}%` : '—', 'do valor em aberto', '', false)}
     ${tile(`Realizado${a.closedN ? ` · ${a.winRate.toFixed(0)}% acerto` : ''}`, a.closedN ? money(a.realized, d) : '—', plural(a.closedN, 'trade fechado', 'trades fechados'), a.closedN ? upDown(a.realized) : '')}
+    ${divTile(d)}
   </div>`;
 
   return `${backupBanner()}${historyChart()}${stats}<div class="two">
     <div><div class="sh"><h3>Por plataforma</h3><span class="hint">valor atual</span></div><div class="bd">${platRows}</div></div>
     <div><div class="sh"><h3>Por ativo</h3><span class="hint">peso · rendimento</span></div><div class="bd">${assetRows}</div></div>
   </div>`;
+}
+
+function divTile(d) {
+  const st = dividendStats(d);
+  if (!st.count) return '';
+  return `<div class="tile"><div class="k">Dividendos · 12 meses</div><div class="v up" style="font-size:19px">${money(st.last12, d)}</div><div class="s">total ${money(st.total, d)}</div></div>`;
 }
 
 function backupBanner() {
@@ -229,9 +245,14 @@ function backupBanner() {
 }
 
 function viewHistory() {
-  if (!state.closed.length) {
-    return empty('Sem histórico ainda', 'Quando venderes (no todo ou em parte), a venda aparece aqui com o lucro realizado, a percentagem e as datas — o teu registo completo.', 'Ver posições', 'go-positions');
+  const sales = state.closed.length, divs = state.dividends.length;
+  if (!sales && !divs) {
+    return empty('Sem histórico ainda', 'Quando venderes (no todo ou em parte) ou receberes dividendos, aparecem aqui — o teu registo completo para o IRS.', 'Ver posições', 'go-positions');
   }
+  return `${sales ? salesSection() : ''}${dividendSection(!sales)}`;
+}
+
+function salesSection() {
   const d = disp();
   const rows = [...state.closed].reverse().map(p => {
     const m = closedM(p), plc = upDown(m.pl);
@@ -251,4 +272,21 @@ function viewHistory() {
       <div class="hrow hh"><div>Ativo</div><div class="r">Unid.</div><div class="r">Custo → Recebido</div><div class="r">Resultado</div><div class="r">%</div><div></div></div>
       ${rows}
     </div></div>`;
+}
+
+function dividendSection(withReport) {
+  const d = disp(), st = dividendStats(d);
+  const rows = [...state.dividends].sort((a, b) => b.date.localeCompare(a.date)).map(x => `<div class="hrow drow">
+      <div class="nm">${esc(x.name)} <small>${esc(x.platform)} · ${esc(x.date)}</small></div>
+      <div class="r">${money(x.gross, x.currency)}</div>
+      <div class="r down">${x.withheld ? `−${money(x.withheld, x.currency)}` : '—'}</div>
+      <div class="r up">${money(netOf(x), x.currency)}</div>
+      <div class="r"><button class="x hx danger" data-action="dividend-del" data-id="${esc(x.id)}" title="Apagar dividendo" aria-label="Apagar dividendo">✕</button></div>
+    </div>`).join('');
+  return `<div class="sh"><h3>Dividendos</h3><div class="sh-r">${withReport ? '<button class="btn ghost sm" data-action="tax">📄 Relatório IRS</button>' : ''}<button class="btn ghost sm" data-action="dividend">＋ Registar</button></div></div>
+    ${st.count ? `<div class="hint" style="margin:-6px 0 12px">líquido recebido: <b class="mono up">${money(st.total, d)}</b> · últimos 12 meses <b class="mono">${money(st.last12, d)}</b></div>
+    <div class="htbl"><div class="hscroll">
+      <div class="hrow drow hh"><div>Ativo</div><div class="r">Bruto</div><div class="r">Retido</div><div class="r">Líquido</div><div></div></div>
+      ${rows}
+    </div></div>` : '<div class="searching" style="text-align:left;padding:4px 0 10px">Ainda sem dividendos — regista-os a partir do 💰 de cada ação ou aqui.</div>'}`;
 }

@@ -99,7 +99,7 @@ header{position:sticky;top:0;z-index:40;width:100%;
 .hero-sub{display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap}
 .chg{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-weight:500;
   font-size:15px;padding:7px 12px;border-radius:10px;font-variant-numeric:tabular-nums}
-.chg.pos{background:var(--up-dim);color:var(--up)} .chg.neg{background:var(--down-dim);color:var(--down)}
+.chg.gain{background:var(--up-dim);color:var(--up)} .chg.loss{background:var(--down-dim);color:var(--down)}
 .chg .lbl{font-family:var(--body);color:var(--muted);font-weight:450;font-size:12.5px}
 .arw{font-size:12px}
 
@@ -411,3 +411,18 @@ button.lnk{background:none;border:0;padding:0;font:inherit;float:none;color:var(
 .tl-g span{color:var(--muted-2)}
 .tl-g b{font-family:var(--mono);font-weight:500;color:var(--muted);text-align:right}
 .tl-n{margin-top:6px;font-size:11px;color:var(--brass-2)}
+
+/* --- v2.3: dividendos --- */
+.divline{margin-top:10px;font-size:12.5px;color:var(--muted);font-family:var(--mono)}
+.divline b{font-weight:500}
+.sh-r{display:flex;gap:8px;align-items:center}
+.hrow.drow{grid-template-columns:1.6fr 1fr 1fr 1fr 30px}
+@media(max-width:640px){.hrow.drow{min-width:520px}}
+.divlist{display:flex;flex-direction:column;gap:7px;margin-bottom:6px}
+@media(min-width:640px){.stats{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}}
+.tdiv .tc-rows b.down{color:var(--down)}
+.tsec{font-family:var(--disp);font-weight:600;font-size:15px;margin:18px 0 0}
+.pos-act{flex-wrap:wrap}
+.pos-act .acts-main{display:flex;gap:8px;flex:1 1 210px;min-width:0}
+.pos-act .acts-main .btn{flex:1;justify-content:center;padding:7px 8px}
+.pos-act .acts-ic{display:flex;gap:8px;margin-left:auto}
