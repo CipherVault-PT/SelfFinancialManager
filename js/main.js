@@ -16,10 +16,12 @@ import { removeDividend } from './dividends.js';
 import { modalClassify } from './ui/modal-classify.js';
 import { modalImport } from './ui/modal-import.js';
 import { initPWA } from './pwa.js';
+import { initLock } from './ui/lock-screen.js';
 
 load();
 state.settings.accent = applyAccent(state.settings.accent);
 save();
+initLock({ onUnlock: () => refresh() });
 
 const background = initBackground($('#aurC'), () => state.settings.bgStyle);
 

@@ -7,6 +7,7 @@ import { refresh } from '../quotes/index.js';
 import { esc, price, num, ago } from '../format.js';
 import { $, toast, openModal, closeModal, segmented } from './dom.js';
 import { applyAccent } from './theme.js';
+import { lockSection, bindLockSection } from './modal-lock.js';
 
 let hooks = { onBackground() {}, onSchedule() {} };
 export const configureSettings = h => { hooks = { ...hooks, ...h }; };
@@ -51,6 +52,8 @@ export function modalSettings() {
     <div class="field"><label>Atualização automática das ações</label>
       <div class="mseg cur5" id="sRefresh">${REFRESH_OPTS.map(([m, l]) => `<button type="button" data-m="${m}" class="${(s.refreshMin || 0) === m ? 'on' : ''}">${l}</button>`).join('')}</div>
       <div class="sd" style="margin-top:8px">A cripto atualiza a cada minuto. Toca em <b>↻</b> para forçar tudo na hora.</div></div>
+
+    ${lockSection()}
 
     <div class="sep"></div>
     <div class="set-sec">🛟 Dados e segurança</div>
@@ -162,6 +165,7 @@ export function modalSettings() {
   };
 
   showPersistence();
+  bindLockSection(() => { modalSettings(); $('#lkSec')?.scrollIntoView({ block: 'start' }); });
 
   $('#sWipe').onclick = () => {
     if (!confirm('Apagar todas as posições, histórico, fundos e alertas?\n\nPodes repor os dados em Definições → “Repor os dados de antes de apagar tudo”.')) return;
@@ -191,5 +195,6 @@ async function showPersistence() {
     const granted = await requestPersistence();
     toast(granted ? 'Armazenamento protegido' : 'O browser recusou — instala a app e faz backups', !granted);
     showPersistence();
+  bindLockSection(() => { modalSettings(); $('#lkSec')?.scrollIntoView({ block: 'start' }); });
   };
 }
