@@ -4,6 +4,7 @@ import { disp, conv, fxRate } from '../fx.js';
 import { agg, metrics, closedM, avgDisp, cashBal, pCost } from '../calc.js';
 import { alertsFor } from '../alerts.js';
 import { net } from '../quotes/index.js';
+import { backupDue, daysSinceBackup } from '../backup.js';
 import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } from '../format.js';
 import { $, $$ } from './dom.js';
 
@@ -133,7 +134,7 @@ function positionCard(p) {
     <div class="pos-act">
       <button class="btn ghost" data-action="reinforce" data-id="${id}">＋ Reforçar</button>
       ${isStock && !m.live ? `<button class="btn ghost" data-action="price" data-id="${id}">Preço atual</button>` : ''}
-      <button class="btn" data-action="close" data-id="${id}">Fechar</button>
+      <button class="btn" data-action="close" data-id="${id}">Vender</button>
       <button class="btn xic ${hasAlert ? 'on' : ''}" data-action="alert" data-id="${id}" title="Alerta de preço" aria-label="Alertas de preço">🔔</button>
       <button class="btn xic" data-action="delete" data-id="${id}" title="Apagar (corrigir erro)" aria-label="Apagar posição">🗑</button>
     </div>
@@ -210,26 +211,37 @@ function viewDashboard(a) {
     ${tile(`Realizado${a.closedN ? ` · ${a.winRate.toFixed(0)}% acerto` : ''}`, a.closedN ? money(a.realized, d) : '—', plural(a.closedN, 'trade fechado', 'trades fechados'), a.closedN ? upDown(a.realized) : '')}
   </div>`;
 
-  return `${historyChart()}${stats}<div class="two">
+  return `${backupBanner()}${historyChart()}${stats}<div class="two">
     <div><div class="sh"><h3>Por plataforma</h3><span class="hint">valor atual</span></div><div class="bd">${platRows}</div></div>
     <div><div class="sh"><h3>Por ativo</h3><span class="hint">peso · rendimento</span></div><div class="bd">${assetRows}</div></div>
   </div>`;
 }
 
+function backupBanner() {
+  if (!backupDue()) return '';
+  const d = daysSinceBackup();
+  return `<div class="nag" role="note">
+    <div class="nag-ic" aria-hidden="true">🛟</div>
+    <div class="nag-tx"><b>Faz uma cópia de segurança</b>
+      <span>Os teus dados só existem neste dispositivo. ${d == null ? 'Ainda não fizeste nenhum backup.' : `O último foi há ${d} dias.`}</span></div>
+    <div class="nag-btns"><button class="btn pri" data-action="backup-now">Guardar</button><button class="btn ghost" data-action="backup-later">Mais tarde</button></div>
+  </div>`;
+}
+
 function viewHistory() {
   if (!state.closed.length) {
-    return empty('Sem histórico ainda', 'Quando fechares uma posição, ela aparece aqui com o lucro realizado, a percentagem e as datas — o teu registo completo.', 'Ver posições', 'go-positions');
+    return empty('Sem histórico ainda', 'Quando venderes (no todo ou em parte), a venda aparece aqui com o lucro realizado, a percentagem e as datas — o teu registo completo.', 'Ver posições', 'go-positions');
   }
   const d = disp();
   const rows = [...state.closed].reverse().map(p => {
     const m = closedM(p), plc = upDown(m.pl);
     return `<div class="hrow">
-      <div class="nm">${esc(p.name)} <small>${esc(p.platform)} · ${esc(sym(p.currency))}${p.closedAt ? ` · ${esc(p.closedAt)}` : ''}</small></div>
+      <div class="nm">${esc(p.name)}${p.partial ? ' <span class="chip">parcial</span>' : ''} <small>${esc(p.platform)} · ${esc(sym(p.currency))}${p.closedAt ? ` · ${esc(p.closedAt)}` : ''}</small></div>
       <div class="r">${units(m.u)}</div>
       <div class="r">${money(pCost(p), p.currency)} → ${money(m.proceeds, p.currency)}</div>
       <div class="r ${plc}">${signed(m.pl, money(m.pl, p.currency))}</div>
       <div class="r ${plc}">${pct(m.plp)}</div>
-      <div class="r"><button class="x danger hx" data-action="delete-closed" data-id="${esc(p.id)}" title="Apagar registo" aria-label="Apagar registo">✕</button></div>
+      <div class="r"><button class="x hx" data-action="undo-sale" data-id="${esc(p.id)}" title="Anular venda" aria-label="Anular venda">↶</button></div>
     </div>`;
   }).join('');
   const tot = state.closed.reduce((s, p) => s + closedM(p).plD, 0);

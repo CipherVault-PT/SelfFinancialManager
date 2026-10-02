@@ -368,3 +368,16 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
 .pqrow .btn{flex-shrink:0}
 .brow .bl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
 @media(max-width:619px){.status{display:flex;padding-right:0}.status #statusTxt{display:none}}
+
+/* --- v2.1: lembrete de backup e venda parcial --- */
+.nag{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px;padding:14px 16px;border-radius:var(--r);
+  border:1px solid rgba(var(--accent-rgb),.35);background:linear-gradient(135deg,rgba(var(--accent-rgb),.12),rgba(var(--accent-rgb),.04))}
+.nag-ic{font-size:22px;line-height:1}
+.nag-tx{flex:1;min-width:200px;display:flex;flex-direction:column;gap:3px}
+.nag-tx b{font-family:var(--disp);font-weight:600;font-size:15px}
+.nag-tx span{color:var(--muted);font-size:13px}
+.nag-btns{display:flex;gap:8px}
+button.lnk{background:none;border:0;padding:0;font:inherit;float:none;color:var(--brass-2);cursor:pointer;font-weight:500}
+.pqseg button[data-q]{flex:0 0 auto;min-width:38px;padding:0 11px}
+.field>.sd{font-size:12px;color:var(--muted-2);line-height:1.45}
+.field>label .sublbl+.lnk{margin-right:10px}
