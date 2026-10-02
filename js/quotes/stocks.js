@@ -138,3 +138,23 @@ export async function searchYahoo(q) {
       online: true,
     }));
 }
+
+/** Série diária de fecho [[AAAA-MM-DD, preço], …] desde `fromISO` (preços em subunidades convertidos). */
+export function parseYahooSeries(d) {
+  const r = d?.chart?.result?.[0];
+  const ts = r?.timestamp, close = r?.indicators?.adjclose?.[0]?.adjclose ?? r?.indicators?.quote?.[0]?.close;
+  if (!Array.isArray(ts) || !Array.isArray(close)) return null;
+  const div = SUBUNITS[r.meta?.currency]?.[1] ?? 1;
+  const out = [];
+  ts.forEach((t, i) => {
+    const c = close[i];
+    if (Number.isFinite(t) && c > 0) out.push([new Date(t * 1000).toISOString().slice(0, 10), Math.round((c / div) * 1e4) / 1e4]);
+  });
+  return out.length ? out : null;
+}
+
+export function fetchYahooSeries(y, fromISO) {
+  const p1 = Math.floor(Date.parse(fromISO) / 1000), p2 = Math.floor(Date.now() / 1000);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?period1=${p1}&period2=${p2}&interval=1d`;
+  return viaProxies(url, d => d && typeof d === 'object' && 'chart' in d, parseYahooSeries);
+}
