@@ -466,3 +466,29 @@ button.lnk{background:none;border:0;padding:0;font:inherit;float:none;color:var(
 .imp-opt:has(input:checked){border-color:var(--brass)}
 .imp-opt input{margin-top:3px;accent-color:var(--brass)}
 .imp-opt small{display:block;color:var(--muted-2);font-size:12px;margin-top:2px}
+
+/* --- v2.7: bloqueio --- */
+.lock{position:fixed;inset:0;z-index:1000;background:radial-gradient(120% 80% at 50% 0%,#141B2C 0%,var(--bg) 60%);display:flex;align-items:center;justify-content:center;
+  padding:max(24px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));animation:lockIn .25s ease-out}
+@keyframes lockIn{from{opacity:0}to{opacity:1}}
+.lock-in{width:100%;max-width:300px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.lock-gem{width:44px;height:52px;display:block;margin-bottom:10px}
+.lock-gem svg{width:100%;height:100%}
+.lock h2{font-family:var(--disp);font-weight:600;font-size:22px;letter-spacing:-.01em}
+.lock-msg{color:var(--muted);font-size:14px;margin:8px 0 18px;min-height:20px}
+.lock-msg.bad{color:var(--down)}
+.lock-dots{display:flex;gap:14px;justify-content:center;margin-bottom:28px;height:14px}
+.lock-dots i{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--muted-2);transition:background .12s,border-color .12s}
+.lock-dots i.on{background:var(--brass);border-color:var(--brass)}
+.lock-dots.shake{animation:lockShake .35s}
+@keyframes lockShake{20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+.lock-pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px 22px;justify-content:center}
+.lock-pad button{width:72px;height:72px;border-radius:50%;border:1px solid var(--line-2);background:rgba(255,255,255,.04);color:var(--text);
+  font-family:var(--disp);font-size:26px;font-weight:500;cursor:pointer;transition:background .12s,transform .08s}
+.lock-pad button:active{background:var(--brass-dim);transform:scale(.95)}
+.lock-pad .lock-fn{border-color:transparent;background:none;font-size:22px}
+.lock.wait .lock-pad{opacity:.35;pointer-events:none}
+.lock-forgot{margin-top:24px;font-size:13px}
+body.locked{overflow:hidden}
+.pin-inp{letter-spacing:.4em;text-align:center}
+@media (prefers-reduced-motion:reduce){.lock,.lock-dots.shake{animation:none}}

@@ -23,6 +23,7 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Distribuição por setor, país e moeda** no Painel, com aviso de concentração (≥ 40% num setor, país ou fora do euro). As ~650 ações da base já vêm classificadas; as restantes ganham o país pela bolsa e podes completar ou corrigir o setor e o país à mão.
 - **Rentabilidade real** no Painel: ganho total (inclui vendas e dividendos), rentabilidade **por ano (TIR)** que conta com o dia de cada compra e venda, e comparação com o **S&P 500** — o mesmo dinheiro, nas mesmas datas, num ETF em euros (SXR8.DE). Antes de 1 ano mostra a rentabilidade do período (anualizar poucos meses engana).
 - **Importar o extrato da XTB** (Excel exportado da xStation): cria as posições abertas e as vendas com a data e o custo de cada compra (prontas para o relatório do IRS) e os dividendos com o imposto retido. Pré-visualização antes de aplicar, não duplica ao importar de novo, pode substituir o que registaste à mão e dá para desfazer. CFDs ficam de fora. O ficheiro é lido só no dispositivo (leitor de .xlsx próprio, sem bibliotecas externas).
+- **Bloqueio com PIN** (4 a 8 algarismos, guardado só como hash PBKDF2) e, onde o dispositivo o permite, **impressão digital / Face ID** (WebAuthn). Bloqueia ao abrir e ao voltar à app (logo, 1, 5 ou 15 min), espera progressiva depois de 5 erros e "Esqueci-me do PIN" (apaga os dados do dispositivo; depois repões um backup). É uma proteção contra quem pegue no telemóvel — não cifra os dados.
 - **Alertas de preço** com notificações.
 - **Gráfico da evolução do património** (1M / 3M / 1A / Tudo).
 - Funciona offline com os últimos dados (service worker).
@@ -57,6 +58,7 @@ js/
   config.js             constantes (corretoras, moedas, cores, intervalos)
   store.js              estado, gravação, migração de dados antigos, importar/exportar, desfazer
   backup.js             lembrete de backup, armazenamento persistente, guardar ficheiro
+  lock.js               bloqueio: PIN (PBKDF2), tentativas, impressão digital/Face ID (WebAuthn)
   format.js             formatação de valores, datas e números
   fx.js                 câmbio e conversões
   calc.js               cálculos de posições, P/L, taxas e totais
@@ -84,4 +86,4 @@ tests/                  testes (node --test)
 npm test
 ```
 
-Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), a distribuição (incluindo que todas as ações da base têm setor e país), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
+Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, a distribuição (incluindo que todas as ações da base têm setor e país), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
