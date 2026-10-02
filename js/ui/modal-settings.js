@@ -58,7 +58,8 @@ export function modalSettings() {
     <div class="set-row"><div><div class="sl">Armazenamento</div><div class="sd" id="sPersist">A verificar…</div></div></div>
     <div class="set-row"><div><div class="sl">Cópia de segurança</div><div class="sd">${backupInfo()}</div></div></div>
     <div class="row2"><button type="button" class="btn ghost" id="sExp" style="justify-content:center">↓ Guardar backup</button>
-      <button type="button" class="btn ghost" id="sImp" style="justify-content:center">↑ Importar</button></div>
+      <button type="button" class="btn ghost" id="sImp" style="justify-content:center">↑ Repor backup</button></div>
+    <button type="button" class="btn ghost wide" data-action="import" style="margin-top:10px">📄 Importar extrato da corretora <span class="sublbl">XTB</span></button>
     <input type="file" id="sFile" accept="application/json,.json" class="hide">
     ${undo ? `<button type="button" class="btn ghost wide" id="sUndo" style="margin-top:10px">↶ Repor os dados de antes ${undo.reason === 'wipe' ? 'de apagar tudo' : 'da importação'} <span class="sublbl">${undoWhen(undo.ts)}</span></button>` : ''}
     <div class="sep"></div>
