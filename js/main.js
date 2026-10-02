@@ -10,6 +10,7 @@ import { modalAdd, modalReinforce, modalClose, modalStockPrice, deletePosition, 
 import { modalAlert, notifyAlerts } from './ui/modal-alert.js';
 import { modalCash } from './ui/modal-cash.js';
 import { modalSettings, configureSettings } from './ui/modal-settings.js';
+import { modalTax } from './ui/modal-tax.js';
 import { initPWA } from './pwa.js';
 
 load();
@@ -60,6 +61,7 @@ const ACTIONS = {
   price: modalStockPrice,
   delete: deletePosition,
   'undo-sale': undoSale,
+  tax: modalTax,
   'toggle-lots': id => {
     if (!ui.expanded.delete(id)) ui.expanded.add(id);
     renderView();
