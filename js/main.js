@@ -11,6 +11,8 @@ import { modalAlert, notifyAlerts } from './ui/modal-alert.js';
 import { modalCash } from './ui/modal-cash.js';
 import { modalSettings, configureSettings } from './ui/modal-settings.js';
 import { modalTax } from './ui/modal-tax.js';
+import { modalDividend } from './ui/modal-dividend.js';
+import { removeDividend } from './dividends.js';
 import { initPWA } from './pwa.js';
 
 load();
@@ -62,6 +64,13 @@ const ACTIONS = {
   delete: deletePosition,
   'undo-sale': undoSale,
   tax: modalTax,
+  dividend: modalDividend,
+  'dividend-del': id => {
+    if (!confirm('Apagar este dividendo?')) return;
+    removeDividend(id);
+    commit();
+    toast('Dividendo apagado');
+  },
   'toggle-lots': id => {
     if (!ui.expanded.delete(id)) ui.expanded.add(id);
     renderView();
