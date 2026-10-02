@@ -245,7 +245,8 @@ function viewHistory() {
     </div>`;
   }).join('');
   const tot = state.closed.reduce((s, p) => s + closedM(p).plD, 0);
-  return `<div class="sh"><h3>Trades fechados</h3><span class="hint">total realizado: <b class="mono ${upDown(tot)}">${signed(tot, money(tot, d))}</b></span></div>
+  return `<div class="sh"><h3>Vendas</h3><button class="btn ghost sm" data-action="tax">📄 Relatório IRS</button></div>
+    <div class="hint" style="margin:-6px 0 12px">total realizado: <b class="mono ${upDown(tot)}">${signed(tot, money(tot, d))}</b></div>
     <div class="htbl"><div class="hscroll">
       <div class="hrow hh"><div>Ativo</div><div class="r">Unid.</div><div class="r">Custo → Recebido</div><div class="r">Resultado</div><div class="r">%</div><div></div></div>
       ${rows}

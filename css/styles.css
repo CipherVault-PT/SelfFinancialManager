@@ -381,3 +381,33 @@ button.lnk{background:none;border:0;padding:0;font:inherit;float:none;color:var(
 .pqseg button[data-q]{flex:0 0 auto;min-width:38px;padding:0 11px}
 .field>.sd{font-size:12px;color:var(--muted-2);line-height:1.45}
 .field>label .sublbl+.lnk{margin-right:10px}
+
+/* --- v2.2: relatório IRS --- */
+@media(min-width:560px){.modal.wide{max-width:720px}}
+.btn.sm{padding:6px 11px;font-size:12.5px}
+.hint{font-size:12.5px;color:var(--muted-2)}
+.tyears{margin-bottom:14px;flex-wrap:wrap}
+.tcards{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px}
+@media(min-width:560px){.tcards{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}}
+.tcard{background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:14px}
+.tcard .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2);font-weight:600}
+.tcard .v{font-family:var(--disp);font-weight:600;font-size:22px;margin:6px 0 10px;font-variant-numeric:tabular-nums}
+.tc-rows{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:12.5px}
+.tc-rows span{color:var(--muted)}
+.tc-rows b{font-family:var(--mono);font-weight:500;text-align:right}
+.tcard .sd{margin-top:8px;font-size:11.5px;color:var(--muted-2)}
+.ttotal{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;margin-bottom:12px;
+  background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.3);font-size:13.5px}
+.ttotal b{font-family:var(--mono);font-size:16px;color:var(--brass-2)}
+.twarn{margin:0 0 12px;padding-left:18px;color:var(--muted);font-size:12.5px;display:flex;flex-direction:column;gap:6px}
+.twarn li::marker{color:var(--down)}
+.tinfo{font-size:12.5px;color:var(--muted);line-height:1.5;padding:12px 14px;border:1px dashed var(--line-2);border-radius:12px;margin-bottom:10px}
+.tinfo b{color:var(--text)}
+.tlines{display:flex;flex-direction:column;gap:8px}
+.tline{background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+.tl-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13.5px}
+.tl-h span{color:var(--muted-2);font-size:11.5px;margin-left:4px}
+.tl-g{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin-top:8px;font-size:12px}
+.tl-g span{color:var(--muted-2)}
+.tl-g b{font-family:var(--mono);font-weight:500;color:var(--muted);text-align:right}
+.tl-n{margin-top:6px;font-size:11px;color:var(--brass-2)}

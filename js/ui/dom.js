@@ -16,9 +16,10 @@ export const modalEl = () => $('#modal');
 export const modalOpen = () => ov().classList.contains('on');
 
 let lastFocus = null;
-export function openModal(html) {
+export function openModal(html, { wide = false } = {}) {
   if (!modalOpen()) lastFocus = document.activeElement;
   modalEl().innerHTML = html;
+  modalEl().classList.toggle('wide', wide);
   ov().classList.add('on');
   ov().setAttribute('aria-hidden', 'false');
   if (matchMedia('(pointer: fine)').matches) {
@@ -41,6 +42,33 @@ export function segmented(el, attr, onPick) {
     for (const x of el.children) x.classList.toggle('on', x === b);
     onPick(b.dataset[attr]);
   });
+}
+
+function download(text, name, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/**
+ * Guarda um ficheiro: no telemóvel abre a folha de partilha (Drive, email, Ficheiros…) quando o
+ * browser o permite; senão descarrega-o. Devolve false se o utilizador cancelar.
+ */
+export async function saveFile(text, name, type) {
+  const file = new File([text], name, { type });
+  if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: name });
+      return true;
+    } catch (e) {
+      if (e?.name === 'AbortError') return false;
+    }
+  }
+  download(text, name, type);
+  return true;
 }
 
 export const debounce = (fn, ms) => {
