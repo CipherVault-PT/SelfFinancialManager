@@ -4,7 +4,7 @@ import { state } from '../js/store.js';
 import { parseYahooSeries } from '../js/quotes/stocks.js';
 import {
   xirr, shownRate, cashFlows, performance, priceOn, benchmarkCompare, ensureBenchmark, benchSeries, benchState,
-  firstBuyDate, BENCHMARK, _resetBenchmark,
+  firstBuyDate, peakCapital, BENCHMARK, _resetBenchmark,
 } from '../js/performance.js';
 import { reset, lot, stockPos, mockFetch } from './helpers.js';
 
@@ -35,7 +35,7 @@ test('carteira: compras, vendas e dividendos contam nas datas certas', () => {
   state.dividends = [{ id: 'd', posId: 'p1', date: '2024-06-01', currency: 'USD', gross: 25, withheld: 0 }];
   const { flows } = cashFlows();
   assert.deepEqual(flows.map(f => [f.d, Math.round(f.v)]), [
-    ['2024-01-01', -1000], ['2024-01-01', -500], ['2024-06-01', 20], ['2024-07-01', 550],
+    ['2024-01-01', -500], ['2024-01-01', -1000], ['2024-06-01', 20], ['2024-07-01', 550],
   ]);
   const pf = performance('2024-12-31');
   assert.equal(pf.start, '2024-01-01');
@@ -43,10 +43,22 @@ test('carteira: compras, vendas e dividendos contam nas datas certas', () => {
   near(pf.invested, 1500);
   near(pf.value, 1100);
   near(pf.gain, 1100 + 550 + 20 - 1500);
+  near(pf.capital, 1500);
   near(pf.totalPct, (170 / 1500) * 100);
   assert.ok(pf.annual > 0.1 && pf.annual < 0.14, String(pf.annual));
   assert.equal(pf.rate, pf.annual);
   assert.equal(firstBuyDate(), '2024-01-01');
+});
+
+test('capital máximo: dinheiro reinvestido não conta duas vezes', () => {
+  assert.equal(peakCapital([{ d: '2025-01-01', v: -1000 }, { d: '2025-02-01', v: 1100 }, { d: '2025-02-01', v: -1100 }, { d: '2025-03-01', v: -200 }]), 1200);
+  reset();
+  state.positions = [pos({ lots: [lot(10, 1000, { date: '2024-03-01' })] })];
+  state.closed = [{ ...pos({ id: 's1', lots: [lot(10, 1000, { date: '2024-01-01' })] }), proceeds: 1000, closedAt: '2024-03-01' }];
+  const pf = performance('2024-12-31');
+  near(pf.invested, 2000);
+  near(pf.capital, 1000);
+  near(pf.totalPct, 10);
 });
 
 test('carteira: sem compras não há rentabilidade; entradas sem data usam o início da app', () => {
