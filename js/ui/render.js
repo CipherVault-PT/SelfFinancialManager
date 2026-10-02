@@ -6,6 +6,7 @@ import { alertsFor } from '../alerts.js';
 import { dividendTotal, dividendStats, netOf } from '../dividends.js';
 import { allocation, concentration, unclassified, UNKNOWN, CRYPTO } from '../allocation.js';
 import { FLAGS } from '../data/classification.js';
+import { performance, benchmarkCompare, benchSeries, benchState, BENCHMARK, MIN_DAYS } from '../performance.js';
 import { net } from '../quotes/index.js';
 import { backupDue, daysSinceBackup } from '../backup.js';
 import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } from '../format.js';
@@ -223,7 +224,7 @@ function viewDashboard(a) {
     ${divTile(d)}
   </div>`;
 
-  return `${backupBanner()}${historyChart()}${stats}<div class="two">
+  return `${backupBanner()}${historyChart()}${performanceSection(d)}${stats}<div class="two">
     <div><div class="sh"><h3>Por plataforma</h3><span class="hint">valor atual</span></div><div class="bd">${platRows}</div></div>
     <div><div class="sh"><h3>Por ativo</h3><span class="hint">peso · rendimento</span></div><div class="bd">${assetRows}</div></div>
   </div>${allocationSection(d)}`;
@@ -254,6 +255,41 @@ function allocationSection(d) {
       <button class="btn ghost sm icon-only" data-action="classify" title="Editar setor e país" aria-label="Editar setor e país">✎</button></div></div>
     <div class="bd">${rows || '<div class="searching">—</div>'}
       ${notes.length ? `<div class="alloc-notes">${notes.map(n => `<div>${n}</div>`).join('')}</div>` : ''}</div>`;
+}
+
+function span(days) {
+  if (days < 60) return plural(days, 'dia', 'dias');
+  if (days < 365) return plural(Math.floor(days / 30.44), 'mês', 'meses');
+  const y = Math.floor(days / 365.25), m = Math.floor((days - y * 365.25) / 30.44);
+  return `${plural(y, 'ano', 'anos')}${m ? ` e ${plural(m, 'mês', 'meses')}` : ''}`;
+}
+
+const ratePct = r => (r == null ? '—' : pct(r * 100));
+
+function performanceSection(d) {
+  const pf = performance();
+  if (!pf) return '';
+  const toD = v => conv(v, 'EUR', d);
+  const annualised = pf.days >= 365;
+  const bench = benchmarkCompare(pf.flows, benchSeries());
+  const diff = pf.rate != null && bench?.rate != null ? (pf.rate - bench.rate) * 100 : null;
+  const bs = benchState();
+  const tile = (k, v, s, cls = '') => `<div class="tile"><div class="k">${k}</div><div class="v ${cls}" style="font-size:19px">${v}</div><div class="s">${s}</div></div>`;
+  const benchTile = bench
+    ? tile(`${BENCHMARK.name} · mesmas datas`, ratePct(bench.rate), `valeria ${money(toD(bench.value), d)}`, bench.rate != null ? upDown(bench.rate) : '')
+    : tile(`${BENCHMARK.name} · mesmas datas`, '—', bs === 'fail' ? 'sem ligação ao Yahoo' : 'a carregar…');
+  const notes = [
+    pf.missingDates && `<span class="warn">${plural(pf.missingDates, 'entrada sem data', 'entradas sem data')} — conta${pf.missingDates === 1 ? '' : 'm'} a partir de quando começaste a usar a app.</span>`,
+    `Conta com o dia de cada compra, venda e dividendo; ${annualised ? 'a taxa anual é a TIR (como num depósito a prazo)' : 'só anualiza a partir de 1 ano'}. A comparação investe o mesmo dinheiro, nos mesmos dias, num ETF do ${BENCHMARK.name} em euros (${BENCHMARK.y}). Fundos/cash não contam.`,
+  ].filter(Boolean);
+  return `<div class="sh"><h3>Rentabilidade</h3><span class="hint">desde ${esc(pf.start)} · ${span(pf.days)}</span></div>
+    <div class="stats perf">
+      ${tile('Ganho total', signed(pf.gain, money(toD(pf.gain), d)), `${pct(pf.totalPct)} sobre ${money(toD(pf.invested), d)}`, upDown(pf.gain))}
+      ${tile(annualised ? 'Por ano' : 'No período', ratePct(pf.rate), pf.rate == null ? `ao fim de ${MIN_DAYS} dias` : 'a tua carteira', pf.rate != null ? upDown(pf.rate) : '')}
+      ${benchTile}
+      ${tile('Diferença', diff == null ? '—' : `${diff >= 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} p.p.`, diff == null ? 'face ao índice' : diff >= 0 ? `à frente do ${BENCHMARK.name}` : `atrás do ${BENCHMARK.name}`, diff == null ? '' : upDown(diff))}
+    </div>
+    <div class="perf-notes">${notes.map(n => `<div>${n}</div>`).join('')}</div>`;
 }
 
 function divTile(d) {
