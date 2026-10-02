@@ -14,7 +14,7 @@ export const defaultCache = () => ({
 
 export const state = {
   version: SCHEMA_VERSION,
-  positions: [], closed: [], cash: [], alerts: [], history: [],
+  positions: [], closed: [], cash: [], dividends: [], alerts: [], history: [],
   settings: defaultSettings(),
   cache: defaultCache(),
 };
@@ -39,7 +39,7 @@ export function load() {
   state.settings.createdAt ||= firstUse();
 }
 
-export const hasData = (s = state) => s.positions.length + s.closed.length + s.cash.length > 0;
+export const hasData = (s = state) => s.positions.length + s.closed.length + s.cash.length + (s.dividends?.length || 0) > 0;
 
 const arr = v => (Array.isArray(v) ? v : []);
 const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
@@ -51,6 +51,7 @@ export function hydrate(d, { keepCache = false } = {}) {
   state.positions = arr(d.positions).map(normalizePosition);
   state.closed = arr(d.closed).map(normalizePosition);
   state.cash = arr(d.cash).map(normalizeCash);
+  state.dividends = arr(d.dividends).map(normalizeDividend).filter(x => x.gross > 0 && x.date);
   state.alerts = arr(d.alerts).filter(a => a && a.posId && n(a.price) > 0);
   state.history = arr(d.history).filter(h => h && h.d && n(h.v) > 0).map(h => ({ d: String(h.d), v: n(h.v) }));
   state.settings = { ...defaultSettings(), ...obj(d.settings) };
@@ -89,6 +90,14 @@ function normalizePosition(p) {
     out.quoteCur = s ? s.c : (out.quoteCur || out.currency);
   }
   return out;
+}
+
+function normalizeDividend(x) {
+  return {
+    id: String(x.id || uid()), posId: x.posId || null, name: String(x.name || ''), symbol: String(x.symbol || ''),
+    platform: String(x.platform || ''), date: String(x.date || ''), currency: x.currency || 'EUR',
+    gross: n(x.gross), withheld: Math.max(0, n(x.withheld)),
+  };
 }
 
 function normalizeCash(c) {
@@ -133,7 +142,7 @@ export function importJSON(text) {
 
 export function wipe() {
   snapshotForUndo('wipe');
-  state.positions = []; state.closed = []; state.cash = []; state.alerts = []; state.history = [];
+  state.positions = []; state.closed = []; state.cash = []; state.dividends = []; state.alerts = []; state.history = [];
   state.cache.prices = {}; state.cache.stockPrices = {}; state.cache.stockMiss = {};
 }
 

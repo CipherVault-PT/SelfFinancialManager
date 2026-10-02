@@ -18,7 +18,8 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Anular uma venda** (as unidades voltam à posição) para corrigir erros.
 - Histórico de vendas com lucro realizado; fundos/cash com depósitos, juros e levantamentos.
 - **Proteção dos dados**: pedido de armazenamento persistente ao browser, lembrete de backup (primeiro aos 3 dias, depois a cada 30), backup pela folha de partilha do telemóvel (Drive, email…) e **repor os dados** de antes de importar ou apagar tudo.
-- **Relatório de mais-valias para o IRS**, por ano: uma linha por cada compra vendida (FIFO), valores em € (câmbio do BCE da data para contas noutra moeda), dias detido, totais de ações/ETFs e cripto (< 365 dias tributada; ≥ 365 dias excluída), imposto estimado à taxa de 28% e exportação CSV para Excel. É uma ajuda — não substitui o guia da corretora nem um contabilista.
+- **Dividendos**: valor bruto, imposto retido na fonte e moeda, por ação (aberta ou já vendida); total e **retorno total** em cada posição, lista no Histórico e resumo dos últimos 12 meses no Painel.
+- **Relatório para o IRS**, por ano — mais-valias: uma linha por cada compra vendida (FIFO), valores em € (câmbio do BCE da data para contas noutra moeda), dias detido, totais de ações/ETFs e cripto (< 365 dias tributada; ≥ 365 dias excluída), imposto estimado à taxa de 28%; dividendos em € com o imposto retido no estrangeiro e o imposto adicional estimado; exportação CSV para Excel. É uma ajuda — não substitui o guia da corretora nem um contabilista.
 - **Alertas de preço** com notificações.
 - **Gráfico da evolução do património** (1M / 3M / 1A / Tudo).
 - Funciona offline com os últimos dados (service worker).
@@ -57,7 +58,8 @@ js/
   fx.js                 câmbio e conversões
   calc.js               cálculos de posições, P/L, taxas e totais
   history.js            histórico diário do património (em EUR)
-  tax.js                relatório de mais-valias (FIFO, câmbio histórico, resumo anual, CSV)
+  dividends.js          dividendos (registo, totais por posição, estatísticas)
+  tax.js                relatório IRS: mais-valias FIFO e dividendos (câmbio histórico, resumo anual, CSV)
   alerts.js             alertas de preço
   net.js                pedidos com timeout e concorrência limitada
   stocks.js             pesquisa e símbolos da base de ações
@@ -75,4 +77,4 @@ tests/                  testes (node --test)
 npm test
 ```
 
-Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
+Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.

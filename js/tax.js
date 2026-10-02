@@ -3,6 +3,7 @@ import { closedM, qty } from './calc.js';
 import { rates } from './fx.js';
 import { fetchJSON } from './net.js';
 import { todayISO } from './format.js';
+import { HIGH_WITHHOLDING } from './dividends.js';
 
 const DAY = 86_400_000;
 const CENT = 0.005;
@@ -59,8 +60,9 @@ export function taxLines(closed = state.closed) {
   return out.sort((a, b) => (a.saleDate || '').localeCompare(b.saleDate || '') || (a.acqDate || '').localeCompare(b.acqDate || ''));
 }
 
+/** Anos com vendas ou dividendos (mais recente primeiro). */
 export const taxYears = lines =>
-  [...new Set(lines.map(l => l.saleDate?.slice(0, 4)).filter(Boolean))].sort().reverse();
+  [...new Set(lines.map(l => (l.saleDate ?? l.date)?.slice(0, 4)).filter(Boolean))].sort().reverse();
 
 /** Ano por omissão: o anterior (o que se declara no IRS) se tiver vendas, senão o mais recente. */
 export function defaultTaxYear(years, now = new Date()) {
@@ -93,15 +95,18 @@ export function taxSummary(lines, year) {
   };
 }
 
-/** Vai buscar os câmbios históricos do BCE (Frankfurter) para as vendas em contas fora do euro. */
-export async function ensureFxHistory(closed = state.closed) {
+/** Vai buscar os câmbios históricos do BCE (Frankfurter) para vendas e dividendos fora do euro. */
+export async function ensureFxHistory(closed = state.closed, dividends = state.dividends ?? []) {
   const foreign = closed.filter(s => s.currency && s.currency !== 'EUR');
-  if (!foreign.length) return false;
-  const curs = [...new Set(foreign.map(s => s.currency))];
+  const foreignDivs = dividends.filter(d => d.currency && d.currency !== 'EUR');
+  if (!foreign.length && !foreignDivs.length) return false;
+  const curs = [...new Set([...foreign, ...foreignDivs].map(s => s.currency))];
   const hist = (state.cache.fxHist ||= {});
   const today = todayISO();
-  const dates = foreign
-    .flatMap(s => [s.closedAt, s.openedAt, ...(s.lots ?? []).map(l => l.date)])
+  const dates = [
+    ...foreign.flatMap(s => [s.closedAt, s.openedAt, ...(s.lots ?? []).map(l => l.date)]),
+    ...foreignDivs.map(d => d.date),
+  ]
     .filter(d => d && d <= today && curs.some(c => !histRate(d, c, hist).exact))
     .sort();
   if (!dates.length) return false;
@@ -130,6 +135,8 @@ export function lineNotes(l) {
 }
 
 /** CSV para Excel PT (separador ";", vírgula decimal, UTF-8 com BOM). */
+const toCSV = (head, rows) => `\uFEFF${[head, ...rows].map(r => r.map(cell).join(';')).join('\r\n')}\r\n`;
+
 export function taxCSV(lines) {
   const head = ['Ativo', 'Símbolo', 'Corretora', 'Tipo', 'Quantidade', 'Data aquisição', 'Valor aquisição (EUR)',
     'Data realização', 'Valor realização (EUR)', 'Mais/menos-valia (EUR)', 'Dias detido', 'Observações'];
@@ -137,5 +144,55 @@ export function taxCSV(lines) {
     l.name, l.symbol, l.platform, l.kind === 'crypto' ? 'Cripto' : 'Ação/ETF', qtyTxt(l.units),
     l.acqDate || '', num2(l.acqEUR), l.saleDate || '', num2(l.saleEUR), num2(l.gain), l.days ?? '', lineNotes(l),
   ]);
-  return `﻿${[head, ...rows].map(r => r.map(cell).join(';')).join('\r\n')}\r\n`;
+  return toCSV(head, rows);
+}
+
+/* ---------- dividendos ---------- */
+
+/** Dividendos em EUR (câmbio do BCE da data de pagamento quando a moeda não é o euro). */
+export function dividendLines(dividends = state.dividends ?? []) {
+  return dividends
+    .map(d => {
+      const fx = histRate(d.date, d.currency);
+      const grossEUR = d.gross / fx.rate, withheldEUR = d.withheld / fx.rate;
+      return {
+        ...d, grossEUR, withheldEUR, netEUR: grossEUR - withheldEUR,
+        approxFx: d.currency !== 'EUR' && !fx.exact,
+        highWithholding: d.gross > 0 && d.withheld / d.gross > HIGH_WITHHOLDING + 1e-6,
+      };
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Resumo anual dos dividendos. O imposto adicional estimado em Portugal é, por dividendo,
+ * 28% do bruto menos o imposto retido no estrangeiro (sem ficar negativo).
+ */
+export function dividendSummary(lines, year) {
+  const rows = lines.filter(l => l.date.startsWith(String(year)));
+  const sum = k => rows.reduce((s, l) => s + l[k], 0);
+  return {
+    lines: rows, count: rows.length,
+    gross: sum('grossEUR'), withheld: sum('withheldEUR'), net: sum('netEUR'),
+    ptTax: rows.reduce((s, l) => s + Math.max(0, l.grossEUR * TAX_RATE - l.withheldEUR), 0),
+    highWithholding: rows.filter(l => l.highWithholding).length,
+    approxFx: rows.filter(l => l.approxFx).length,
+  };
+}
+
+export function dividendNotes(l) {
+  return [
+    l.highWithholding && `retenção acima de ${HIGH_WITHHOLDING * 100}%`,
+    l.approxFx && 'câmbio aproximado',
+  ].filter(Boolean).join(', ');
+}
+
+export function dividendCSV(lines) {
+  const head = ['Data', 'Ativo', 'Símbolo', 'Corretora', 'Moeda', 'Bruto (moeda)', 'Retido (moeda)',
+    'Bruto (EUR)', 'Imposto retido no estrangeiro (EUR)', 'Líquido (EUR)', 'Observações'];
+  const rows = lines.map(l => [
+    l.date, l.name, l.symbol, l.platform, l.currency, num2(l.gross), num2(l.withheld),
+    num2(l.grossEUR), num2(l.withheldEUR), num2(l.netEUR), dividendNotes(l),
+  ]);
+  return toCSV(head, rows);
 }
