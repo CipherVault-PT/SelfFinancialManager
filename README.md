@@ -20,6 +20,7 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Proteção dos dados**: pedido de armazenamento persistente ao browser, lembrete de backup (primeiro aos 3 dias, depois a cada 30), backup pela folha de partilha do telemóvel (Drive, email…) e **repor os dados** de antes de importar ou apagar tudo.
 - **Dividendos**: valor bruto, imposto retido na fonte e moeda, por ação (aberta ou já vendida); total e **retorno total** em cada posição, lista no Histórico e resumo dos últimos 12 meses no Painel.
 - **Relatório para o IRS**, por ano — mais-valias: uma linha por cada compra vendida (FIFO), valores em € (câmbio do BCE da data para contas noutra moeda), dias detido, totais de ações/ETFs e cripto (< 365 dias tributada; ≥ 365 dias excluída), imposto estimado à taxa de 28%; dividendos em € com o imposto retido no estrangeiro e o imposto adicional estimado; exportação CSV para Excel. É uma ajuda — não substitui o guia da corretora nem um contabilista.
+- **Distribuição por setor, país e moeda** no Painel, com aviso de concentração (≥ 40% num setor, país ou fora do euro). As ~650 ações da base já vêm classificadas; as restantes ganham o país pela bolsa e podes completar ou corrigir o setor e o país à mão.
 - **Alertas de preço** com notificações.
 - **Gráfico da evolução do património** (1M / 3M / 1A / Tudo).
 - Funciona offline com os últimos dados (service worker).
@@ -59,11 +60,13 @@ js/
   calc.js               cálculos de posições, P/L, taxas e totais
   history.js            histórico diário do património (em EUR)
   dividends.js          dividendos (registo, totais por posição, estatísticas)
+  allocation.js         distribuição por setor, país e moeda; concentração
   tax.js                relatório IRS: mais-valias FIFO e dividendos (câmbio histórico, resumo anual, CSV)
   alerts.js             alertas de preço
   net.js                pedidos com timeout e concorrência limitada
   stocks.js             pesquisa e símbolos da base de ações
   data/stocks.js        base local de ações e ETFs (símbolo Yahoo único)
+  data/classification.js setores, países e classificação das ações europeias e temáticas
   quotes/               cotações: crypto.js, stocks.js e index.js (orquestração)
   ui/                   render, modais, formulário de entradas, tema, fundo animado
   pwa.js                instalação e service worker
@@ -77,4 +80,4 @@ tests/                  testes (node --test)
 npm test
 ```
 
-Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
+Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a distribuição (incluindo que todas as ações da base têm setor e país), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
