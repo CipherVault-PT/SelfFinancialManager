@@ -1,5 +1,5 @@
 // Service worker: rede primeiro (para receber sempre a versão nova) e cache como reserva offline.
-const CACHE = 'aurora-v3';
+const CACHE = 'aurora-v4';
 const SHELL = [
   './',
   './index.html',
@@ -23,6 +23,7 @@ const SHELL = [
   './js/quotes/index.js',
   './js/quotes/stocks.js',
   './js/stocks.js',
+  './js/tax.js',
   './js/store.js',
   './js/ui/background.js',
   './js/ui/dom.js',
@@ -31,6 +32,7 @@ const SHELL = [
   './js/ui/modal-cash.js',
   './js/ui/modal-position.js',
   './js/ui/modal-settings.js',
+  './js/ui/modal-tax.js',
   './js/ui/render.js',
   './js/ui/theme.js',
 ];

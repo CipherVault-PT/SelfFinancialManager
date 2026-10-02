@@ -1,5 +1,6 @@
 import { state, exportJSON, hasData } from './store.js';
 import { todayISO } from './format.js';
+import { saveFile } from './ui/dom.js';
 
 const DAY = 86_400_000;
 export const BACKUP_EVERY_DAYS = 30;
@@ -22,34 +23,9 @@ export function snoozeBackup(now = Date.now()) {
   state.settings.backupSnoozeUntil = now + SNOOZE_DAYS * DAY;
 }
 
-function download(text, name) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: name });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-}
-
-/**
- * Guarda o backup: no telemóvel abre a folha de partilha (Drive, email, Ficheiros…) quando o
- * browser o permite; senão descarrega o ficheiro. Devolve false se o utilizador cancelar.
- */
+/** Guarda o backup (folha de partilha no telemóvel ou descarga). Devolve false se o utilizador cancelar. */
 export async function saveBackup() {
-  const name = `aurora-backup-${todayISO()}.json`;
-  const json = exportJSON();
-  const file = new File([json], name, { type: 'application/json' });
-  const touch = matchMedia('(pointer: coarse)').matches;
-  if (touch && navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: 'Backup Aurora Investments' });
-    } catch (e) {
-      if (e?.name === 'AbortError') return false;
-      download(json, name);
-    }
-  } else {
-    download(json, name);
-  }
+  if (!(await saveFile(exportJSON(), `aurora-backup-${todayISO()}.json`, 'application/json'))) return false;
   state.settings.lastBackup = Date.now();
   state.settings.backupSnoozeUntil = 0;
   return true;
