@@ -112,6 +112,45 @@ export function agg(cur = disp()) {
 }
 
 /**
+ * Vende `units` pelo método FIFO (as compras mais antigas primeiro), a regra do IRS.
+ * Devolve as frações vendidas, com a data de compra original, e as entradas que ficam.
+ */
+export function sellFIFO(lots, units, fallbackDate = '') {
+  const order = lots
+    .map((l, i) => ({ l, i }))
+    .sort((a, b) => (a.l.date || fallbackDate).localeCompare(b.l.date || fallbackDate) || a.i - b.i);
+  const taken = new Map(), sold = [];
+  let left = units;
+  for (const { l, i } of order) {
+    if (left <= units * 1e-12) break;
+    const take = Math.min(left, l.shares);
+    if (!(take > 0)) continue;
+    sold.push({ ...l, shares: take, cost: l.cost * (take / l.shares) });
+    taken.set(i, take);
+    left -= take;
+  }
+  const remaining = lots.flatMap((l, i) => {
+    const rest = l.shares - (taken.get(i) || 0);
+    if (rest <= l.shares * 1e-9) return [];
+    return rest === l.shares ? [l] : [{ ...l, shares: rest, cost: l.cost * (rest / l.shares) }];
+  });
+  return { sold, remaining };
+}
+
+/** Junta entradas (ex: ao anular uma venda), voltando a unir frações do mesmo lote. */
+export function mergeLots(base, extra) {
+  const out = base.map(l => ({ ...l }));
+  const unit = l => (l.shares > 0 ? l.cost / l.shares : 0);
+  for (const l of extra) {
+    const same = out.find(o => o.date === l.date && o.priceQ === l.priceQ && o.priceCur === l.priceCur
+      && Math.abs(unit(o) - unit(l)) <= Math.abs(unit(l)) * 1e-9);
+    if (same) { same.shares += l.shares; same.cost += l.cost; }
+    else out.push({ ...l });
+  }
+  return out.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+}
+
+/**
  * Calcula uma nova entrada (lot).
  * - stock: nº de ações + preço por ação (em priceCur) e, opcionalmente, custo exato ou câmbio usado.
  * - cost: nº de unidades + custo total.

@@ -1,9 +1,10 @@
 import { ACCENTS, BACKGROUNDS, DEFAULT_RATES } from '../config.js';
-import { state, commit, save, exportJSON, importJSON, wipe } from '../store.js';
+import { state, commit, save, importJSON, wipe, readUndo, restoreUndo } from '../store.js';
+import { saveBackup, daysSinceBackup, isPersisted, requestPersistence } from '../backup.js';
 import { fxRate, fxFresh } from '../fx.js';
 import { yahooQuote, validProxyUrl } from '../quotes/stocks.js';
 import { refresh } from '../quotes/index.js';
-import { esc, price, num, ago, todayISO } from '../format.js';
+import { esc, price, num, ago } from '../format.js';
 import { $, toast, openModal, closeModal, segmented } from './dom.js';
 import { applyAccent } from './theme.js';
 
@@ -16,6 +17,7 @@ export function modalSettings() {
   const s = state.settings, c = state.cache;
   const autoUsd = c.rates?.USD || DEFAULT_RATES.USD;
   const hasProxy = !!(s.proxyUrl || '').trim();
+  const undo = readUndo();
   openModal(`<div class="mh"><h3>Definições</h3><button type="button" class="x" data-action="modal-close" aria-label="Fechar">✕</button></div>
     <div class="set-sec">🎨 Aspeto</div>
     <div class="field"><label>Fundo animado</label>
@@ -51,10 +53,14 @@ export function modalSettings() {
       <div class="sd" style="margin-top:8px">A cripto atualiza a cada minuto. Toca em <b>↻</b> para forçar tudo na hora.</div></div>
 
     <div class="sep"></div>
-    <div class="set-row"><div><div class="sl">Cópia de segurança</div><div class="sd">Guarda ou repõe posições, histórico, fundos, alertas e definições</div></div></div>
-    <div class="row2"><button type="button" class="btn ghost" id="sExp" style="justify-content:center">↓ Exportar</button>
+    <div class="set-sec">🛟 Dados e segurança</div>
+    <p class="mlead" style="margin-bottom:10px">Os teus dados ficam <b>só neste dispositivo</b> — nada é enviado para servidores. Guarda backups regularmente.</p>
+    <div class="set-row"><div><div class="sl">Armazenamento</div><div class="sd" id="sPersist">A verificar…</div></div></div>
+    <div class="set-row"><div><div class="sl">Cópia de segurança</div><div class="sd">${backupInfo()}</div></div></div>
+    <div class="row2"><button type="button" class="btn ghost" id="sExp" style="justify-content:center">↓ Guardar backup</button>
       <button type="button" class="btn ghost" id="sImp" style="justify-content:center">↑ Importar</button></div>
     <input type="file" id="sFile" accept="application/json,.json" class="hide">
+    ${undo ? `<button type="button" class="btn ghost wide" id="sUndo" style="margin-top:10px">↶ Repor os dados de antes ${undo.reason === 'wipe' ? 'de apagar tudo' : 'da importação'} <span class="sublbl">${undoWhen(undo.ts)}</span></button>` : ''}
     <div class="sep"></div>
     <button type="button" class="btn danger ghost wide" id="sWipe">Apagar tudo</button>`);
 
@@ -116,14 +122,11 @@ export function modalSettings() {
     toast(s.refreshMin ? `Ações: a cada ${s.refreshMin} min` : 'Ações: só manual (↻)');
   });
 
-  $('#sExp').onclick = () => {
-    const url = URL.createObjectURL(new Blob([exportJSON()], { type: 'application/json' }));
-    const a = Object.assign(document.createElement('a'), { href: url, download: `aurora-backup-${todayISO()}.json` });
-    document.body.append(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    toast('Backup exportado');
+  $('#sExp').onclick = async () => {
+    if (!(await saveBackup())) return;
+    save();
+    modalSettings();
+    toast('Backup guardado');
   };
 
   $('#sImp').onclick = () => $('#sFile').click();
@@ -144,11 +147,48 @@ export function modalSettings() {
     }
   };
 
+  const undoBtn = $('#sUndo');
+  if (undoBtn) undoBtn.onclick = () => {
+    if (!confirm('Repor os dados anteriores? Os dados atuais são substituídos.')) return;
+    if (!restoreUndo()) return toast('Não há dados para repor', true);
+    applyAccent(state.settings.accent);
+    hooks.onBackground();
+    hooks.onSchedule();
+    commit();
+    closeModal();
+    toast('Dados repostos');
+    refresh({ force: true });
+  };
+
+  showPersistence();
+
   $('#sWipe').onclick = () => {
-    if (!confirm('Apagar todas as posições, histórico, fundos e alertas? Esta ação não se desfaz.')) return;
+    if (!confirm('Apagar todas as posições, histórico, fundos e alertas?\n\nPodes repor os dados em Definições → “Repor os dados de antes de apagar tudo”.')) return;
     wipe();
     commit();
     closeModal();
     toast('Tudo apagado');
+  };
+}
+
+function backupInfo() {
+  const d = daysSinceBackup();
+  if (d == null) return 'Ainda não fizeste nenhum backup.';
+  return `Último backup ${d === 0 ? 'hoje' : d === 1 ? 'ontem' : `há ${d} dias`}. Guarda posições, histórico, fundos, alertas e definições.`;
+}
+
+const undoWhen = ts => new Date(ts).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+async function showPersistence() {
+  const el = $('#sPersist');
+  const ok = await isPersisted();
+  if (!el?.isConnected) return;
+  if (ok === null) { el.textContent = 'Este browser não permite proteger o armazenamento — faz backups com frequência.'; return; }
+  if (ok) { el.innerHTML = '<span style="color:var(--up)">🔒 Protegido</span> — o browser não apaga os dados sozinho.'; return; }
+  el.innerHTML = '<span style="color:var(--down)">⚠ Não protegido</span> — o browser pode apagá-los se faltar espaço. <button type="button" class="lnk" id="sPersistBtn">Proteger</button>';
+  $('#sPersistBtn').onclick = async () => {
+    const granted = await requestPersistence();
+    toast(granted ? 'Armazenamento protegido' : 'O browser recusou — instala a app e faz backups', !granted);
+    showPersistence();
   };
 }

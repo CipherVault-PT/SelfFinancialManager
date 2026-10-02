@@ -33,3 +33,15 @@ export function mockFetch(routes) {
   };
   return calls;
 }
+
+/** localStorage em memória para testes em Node. */
+export function memoryStorage() {
+  const m = new Map();
+  globalThis.localStorage = {
+    getItem: k => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: k => m.delete(k),
+    clear: () => m.clear(),
+  };
+  return m;
+}

@@ -1,12 +1,13 @@
 import { PLATFORMS, CURRENCIES } from '../config.js';
 import { state, commit, uid } from '../store.js';
 import { conv } from '../fx.js';
-import { metrics, avgDisp, feeFor, quoteCurOf, qty, pCost } from '../calc.js';
+import { metrics, avgDisp, feeFor, quoteCurOf, qty, pCost, sellFIFO, mergeLots } from '../calc.js';
 import { dropAlertsFor } from '../alerts.js';
 import { searchLocal } from '../stocks.js';
 import { searchCoins } from '../quotes/crypto.js';
 import { quoteFor, searchYahoo } from '../quotes/stocks.js';
 import { refresh } from '../quotes/index.js';
+import { requestPersistence } from '../backup.js';
 import { esc, money, price, pct, signed, units, sym, num, inputNum, todayISO } from '../format.js';
 import { $, toast, openModal, closeModal, segmented, debounce } from './dom.js';
 import { lotForm } from './lot-form.js';
@@ -253,6 +254,7 @@ export function modalAdd() {
     commit();
     closeModal();
     toast('Posição adicionada');
+    requestPersistence();
     refresh({ crypto: p.kind === 'crypto', stocks: p.kind === 'stock' && !draft.quote, force: true });
   }
 }
@@ -300,33 +302,49 @@ export function modalReinforce(id) {
   };
 }
 
-/* ---------- fechar (vender) ---------- */
+/* ---------- vender (total ou parcial) ---------- */
+
+const FULL_EPS = 1e-9;
 
 export function modalClose(id) {
   const p = findPos(id);
   if (!p) return;
   const m = metrics(p), exCur = m.nativeCur, cross = exCur !== p.currency;
   const csym = sym(p.currency), fee = feeFor(p.platform);
+  const unit = p.kind === 'crypto' ? 'unidades' : 'ações';
   let adj = 'auto';
-  openModal(`${header('Fechar posição')}
+  openModal(`${header(`Vender ${esc(p.name)}`)}
     <div class="picked" style="margin-bottom:16px;background:var(--surface-2);border-color:var(--line-2)">
       ${p.kind === 'crypto' && p.thumb ? `<img src="${esc(p.thumb)}" alt="">` : `<div class="tkn">${esc((p.symbol || p.name).slice(0, 3))}</div>`}
-      <div><div class="rn">${esc(p.name)}</div><div class="rs">${units(m.u)} · ${esc(p.platform)} · resultado em ${esc(csym)}</div></div></div>
-    <div id="cForm"><div class="field"><label for="cExit">Preço de saída (${esc(exCur)})</label>
-      <input class="inp mono" id="cExit" inputmode="decimal" autocomplete="off" value="${inputNum(m.nativePrice)}" data-autofocus></div>
-    ${cross ? '<div id="cAdjArea"></div>' : ''}
-    <div class="field"><label for="cDate">Data da venda</label><input class="inp" id="cDate" type="date" max="${todayISO()}" value="${todayISO()}"></div>
-    <div class="preview big" id="cPrev"></div></div>
-    <div class="row2"><button type="button" class="btn ghost" data-action="modal-close" style="justify-content:center">Cancelar</button>
-      <button type="button" class="btn pri" id="cDo" style="justify-content:center">Confirmar fecho</button></div>`);
+      <div><div class="rn">${esc(p.name)}</div><div class="rs">${units(m.u)} ${unit} · ${esc(p.platform)} · resultado em ${esc(csym)}</div></div></div>
+    <div id="cForm">
+      <div class="field"><label for="cQty">Quantidade a vender <span class="sublbl">tens ${units(m.u)}</span></label>
+        <div class="pqrow"><input class="inp mono" id="cQty" inputmode="decimal" autocomplete="off" value="${inputNum(m.u, 8)}">
+          <div class="mseg pqseg" id="cQtyQuick"><button type="button" data-q="0.25">¼</button><button type="button" data-q="0.5">½</button><button type="button" data-q="1" class="on">Tudo</button></div></div></div>
+      <div class="field"><label for="cExit">Preço de venda (${esc(exCur)})</label>
+        <input class="inp mono" id="cExit" inputmode="decimal" autocomplete="off" value="${inputNum(m.nativePrice)}" data-autofocus></div>
+      ${cross ? '<div id="cAdjArea"></div>' : ''}
+      <div class="field"><label for="cDate">Data da venda</label><input class="inp" id="cDate" type="date" max="${todayISO()}" value="${todayISO()}"></div>
+      <div class="preview big" id="cPrev"></div>
+      <div class="curhint" id="cFifo" hidden>Venda parcial pelo método <b>FIFO</b> (as compras mais antigas saem primeiro), como manda o IRS. O preço médio das que ficam pode diferir do que a corretora mostra.</div>
+    </div>
+    <div class="row2" style="margin-top:14px"><button type="button" class="btn ghost" data-action="modal-close" style="justify-content:center">Cancelar</button>
+      <button type="button" class="btn pri" id="cDo" style="justify-content:center">Confirmar venda</button></div>`);
 
-  const proceeds = () => {
+  /** Quantidade escrita; valores muito próximos do total contam como venda total. */
+  const sellQty = () => {
+    const q = num($('#cQty').value);
+    if (!(q > 0) || q > m.u * (1 + FULL_EPS)) return NaN;
+    return m.u - q <= m.u * FULL_EPS ? m.u : q;
+  };
+
+  const proceeds = q => {
     const ex = num($('#cExit').value);
-    if (!(ex > 0)) return NaN;
-    if (!cross) return m.u * ex;
+    if (!(ex > 0) || !(q > 0)) return NaN;
+    if (!cross) return q * ex;
     if (adj === 'recv') return num($('#cRecv')?.value);
-    if (adj === 'rate') return m.u * ex * num($('#cRate')?.value);
-    return conv(m.u * ex, exCur, p.currency) * (1 - fee);
+    if (adj === 'rate') return q * ex * num($('#cRate')?.value);
+    return conv(q * ex, exCur, p.currency) * (1 - fee);
   };
 
   const renderAdj = () => {
@@ -337,37 +355,64 @@ export function modalClose(id) {
         <button type="button" data-aj="recv" class="${adj === 'recv' ? 'on' : ''}">Recebido ${esc(csym)}</button>
         <button type="button" data-aj="rate" class="${adj === 'rate' ? 'on' : ''}">Câmbio</button></div>
       ${adj === 'recv'
-        ? `<div class="field"><label for="cRecv">Recebido (${esc(csym)})</label><input class="inp mono" id="cRecv" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><div class="curhint">O valor exato que a corretora te creditou pela venda.</div>`
+        ? `<div class="field"><label for="cRecv">Recebido (${esc(csym)})</label><input class="inp mono" id="cRecv" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><div class="curhint">O valor exato que a corretora te creditou por esta venda.</div>`
         : adj === 'rate'
-          ? `<div class="field"><label for="cRate">Câmbio de fecho <span class="sublbl">1 ${esc(sym(exCur))} = ? ${esc(csym)}</span></label><input class="inp mono" id="cRate" inputmode="decimal" autocomplete="off" placeholder="ex: 0,8535"></div><div class="curhint">A taxa de câmbio da venda (já inclui a taxa).</div>`
+          ? `<div class="field"><label for="cRate">Câmbio da venda <span class="sublbl">1 ${esc(sym(exCur))} = ? ${esc(csym)}</span></label><input class="inp mono" id="cRate" inputmode="decimal" autocomplete="off" placeholder="ex: 0,8535"></div><div class="curhint">A taxa de câmbio da venda (já inclui a taxa).</div>`
           : `<div class="curhint">Converto ao câmbio de hoje${fee > 0 ? ` menos <b style="color:var(--down)">${String(state.settings.fxFeePct).replace('.', ',')}% de taxa</b> da ${esc(p.platform)}` : ` (a ${esc(p.platform)} não cobra taxa)`}.</div>`}`;
     segmented($('#cAdjMode'), 'aj', v => { adj = v; renderAdj(); update(); });
   };
 
   const update = () => {
-    const pr = proceeds();
-    const ok = Number.isFinite(pr) && pr > 0;
-    const pl = pr - m.cost, plp = m.cost > 0 ? (pl / m.cost) * 100 : 0;
-    $('#cPrev').innerHTML = `<div class="pr"><span>Custo</span><b>${money(m.cost, p.currency)}</b></div>
+    const q = sellQty();
+    const partial = q > 0 && q < m.u;
+    const cost = q > 0 ? sellFIFO(p.lots, q, p.openedAt).sold.reduce((s, l) => s + l.cost, 0) : NaN;
+    const pr = proceeds(q);
+    const ok = Number.isFinite(pr) && pr > 0 && Number.isFinite(cost);
+    const pl = pr - cost, plp = cost > 0 ? (pl / cost) * 100 : 0;
+    $('#cFifo').hidden = !partial;
+    $('#cDo').textContent = partial ? 'Confirmar venda parcial' : 'Confirmar venda';
+    $('#cPrev').innerHTML = `${partial ? `<div class="pr"><span>Vendes</span><b>${units(q)} de ${units(m.u)}</b></div>` : ''}
+      <div class="pr"><span>Custo${partial ? ' (FIFO)' : ''}</span><b>${Number.isFinite(cost) ? money(cost, p.currency) : '—'}</b></div>
       <div class="pr"><span>Recebido</span><b>${ok ? money(pr, p.currency) : '—'}</b></div>
-      <div class="pr total"><span>Resultado</span><b class="${pl >= 0 ? 'up' : 'down'}" style="font-size:16px">${ok ? `${signed(pl, money(pl, p.currency))} · ${pct(plp)}` : '—'}</b></div>`;
+      <div class="pr total"><span>Resultado</span><b class="${pl >= 0 ? 'up' : 'down'}" style="font-size:16px">${ok ? `${signed(pl, money(pl, p.currency))} · ${pct(plp)}` : '—'}</b></div>
+      ${partial ? `<div class="pr"><span>Ficam</span><b>${units(m.u - q)} ${unit}</b></div>` : ''}`;
   };
 
+  segmented($('#cQtyQuick'), 'q', f => {
+    $('#cQty').value = inputNum(+f === 1 ? m.u : m.u * +f, 8);
+    update();
+  });
+  $('#cQty').addEventListener('input', () => {
+    for (const b of $('#cQtyQuick').children) b.classList.remove('on');
+  });
   $('#cForm').oninput = update;
   renderAdj();
   update();
 
   $('#cDo').onclick = () => {
-    const pr = proceeds();
-    if (!(pr > 0)) return toast('Indica o preço ou valor de saída', true);
-    state.positions = state.positions.filter(x => x.id !== id);
-    state.closed.push({ ...p, exitPrice: num($('#cExit').value), exitCur: exCur, proceeds: pr, closedAt: $('#cDate').value || todayISO() });
-    dropAlertsFor(id);
-    ui.expanded.delete(id);
+    const q = sellQty();
+    if (!(q > 0)) return toast(`Quantidade inválida — no máximo ${units(m.u)}`, true);
+    const pr = proceeds(q);
+    if (!(pr > 0)) return toast('Indica o preço ou valor de venda', true);
+    const full = q >= m.u;
+    const { sold, remaining } = sellFIFO(p.lots, q, p.openedAt);
+    const sale = {
+      ...p, lots: sold, exitPrice: num($('#cExit').value), exitCur: exCur, proceeds: pr,
+      closedAt: $('#cDate').value || todayISO(),
+    };
+    if (full) {
+      state.positions = state.positions.filter(x => x.id !== id);
+      dropAlertsFor(id);
+      ui.expanded.delete(id);
+    } else {
+      Object.assign(sale, { id: uid(), parentId: p.id, partial: true });
+      p.lots = remaining;
+    }
+    state.closed.push(sale);
     commit();
     closeModal();
-    const pl = pr - m.cost;
-    toast(`${pl >= 0 ? 'Lucro' : 'Perda'} de ${money(Math.abs(pl), p.currency)}`);
+    const pl = pr - sold.reduce((s, l) => s + l.cost, 0);
+    toast(`${pl >= 0 ? 'Lucro' : 'Perda'} de ${money(Math.abs(pl), p.currency)}${full ? '' : ` · ficam ${units(qty(p))} ${unit}`}`);
   };
 }
 
@@ -396,7 +441,7 @@ export function modalStockPrice(id) {
 export function deletePosition(id) {
   const p = findPos(id);
   if (!p) return;
-  if (!confirm(`Apagar "${p.name}"?\n\nÉ removida já e NÃO fica no histórico. Usa isto só para corrigir erros — para uma venda a sério, usa Fechar.`)) return;
+  if (!confirm(`Apagar "${p.name}"?\n\nÉ removida já e NÃO fica no histórico. Usa isto só para corrigir erros — para uma venda a sério, usa Vender.`)) return;
   state.positions = state.positions.filter(x => x.id !== id);
   dropAlertsFor(id);
   ui.expanded.delete(id);
@@ -404,10 +449,22 @@ export function deletePosition(id) {
   toast('Posição apagada');
 }
 
-export function deleteClosed(id) {
-  const p = state.closed.find(x => x.id === id);
-  if (!p || !confirm(`Apagar o registo de "${p.name}" do histórico?`)) return;
+/** Anula uma venda: as unidades voltam à posição de origem (ou a posição é reaberta). */
+export function undoSale(id) {
+  const rec = state.closed.find(x => x.id === id);
+  if (!rec) return;
+  const what = `${units(qty(rec))} ${rec.kind === 'crypto' ? 'unidades' : 'ações'}`;
+  if (!confirm(`Anular a venda de "${rec.name}"?\n\nAs ${what} voltam às posições abertas e o resultado desta venda deixa de contar.`)) return;
   state.closed = state.closed.filter(x => x.id !== id);
+  const posId = rec.parentId || rec.id;
+  const target = findPos(posId);
+  if (target) {
+    target.lots = mergeLots(target.lots, rec.lots);
+  } else {
+    const reopened = { ...rec, id: posId };
+    for (const k of ['exitPrice', 'exitCur', 'proceeds', 'closedAt', 'partial', 'parentId']) delete reopened[k];
+    state.positions.push(reopened);
+  }
   commit();
-  toast('Registo apagado');
+  toast('Venda anulada');
 }

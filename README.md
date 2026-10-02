@@ -2,7 +2,7 @@
 
 Junta num só sítio as posições abertas das várias corretoras (Revolut, XTB, Trade Republic…), incluindo cripto, e vê o teu património e os ganhos ao vivo.
 
-App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (PWA). Os dados ficam **só no teu dispositivo** (`localStorage`). Para os levares para outro dispositivo, usa *Exportar/Importar*.
+App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (PWA). Os dados ficam **só no teu dispositivo** (`localStorage`). Faz backups regulares em **⚙ → Dados e segurança** — também servem para levar os dados para outro dispositivo.
 
 ## Funcionalidades
 
@@ -14,7 +14,10 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Câmbio do BCE** (Frankfurter) para EUR, USD, GBP, CHF, DKK e outras.
 - **Taxa de conversão da XTB** (0,5%) aplicada na compra e na venda; a Revolut e a Trade Republic ficam isentas.
 - **Várias entradas por posição**, com o preço médio recalculado.
-- Fecho de posições com lucro realizado, histórico de trades, fundos/cash com depósitos, juros e levantamentos.
+- **Venda total ou parcial** (¼, ½, tudo ou qualquer quantidade) pelo método **FIFO** — as compras mais antigas saem primeiro, como manda o IRS.
+- **Anular uma venda** (as unidades voltam à posição) para corrigir erros.
+- Histórico de vendas com lucro realizado; fundos/cash com depósitos, juros e levantamentos.
+- **Proteção dos dados**: pedido de armazenamento persistente ao browser, lembrete de backup (primeiro aos 3 dias, depois a cada 30), backup pela folha de partilha do telemóvel (Drive, email…) e **repor os dados** de antes de importar ou apagar tudo.
 - **Alertas de preço** com notificações.
 - **Gráfico da evolução do património** (1M / 3M / 1A / Tudo).
 - Funciona offline com os últimos dados (service worker).
@@ -47,7 +50,8 @@ icons/                  ícones da app
 js/
   main.js               arranque, eventos e atualizações automáticas
   config.js             constantes (corretoras, moedas, cores, intervalos)
-  store.js              estado, gravação, migração de dados antigos, backup
+  store.js              estado, gravação, migração de dados antigos, importar/exportar, desfazer
+  backup.js             lembrete de backup, armazenamento persistente, guardar ficheiro
   format.js             formatação de valores, datas e números
   fx.js                 câmbio e conversões
   calc.js               cálculos de posições, P/L, taxas e totais
@@ -69,4 +73,4 @@ tests/                  testes (node --test)
 npm test
 ```
 
-Os testes cobrem os cálculos (taxas, conversões, P/L, alertas, histórico), a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
+Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.

@@ -4,6 +4,7 @@ import { resolveStock } from './stocks.js';
 export const defaultSettings = () => ({
   displayCurrency: 'EUR', fxManual: null, apiKey: '', refreshMin: 5, fxFeePct: 0.5,
   proxyUrl: '', bgStyle: 'aurora', accent: 'gold',
+  createdAt: null, lastBackup: null, backupSnoozeUntil: 0,
 });
 
 export const defaultCache = () => ({
@@ -35,7 +36,10 @@ export function load() {
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { /* dados corrompidos */ }
   if (raw && typeof raw === 'object') hydrate(raw);
+  state.settings.createdAt ||= firstUse();
 }
+
+export const hasData = (s = state) => s.positions.length + s.closed.length + s.cash.length > 0;
 
 const arr = v => (Array.isArray(v) ? v : []);
 const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
@@ -56,8 +60,11 @@ export function hydrate(d, { keepCache = false } = {}) {
   }
   if (fromVersion < 2) migrateV1(fromVersion, keepCache);
   pruneAlerts();
+  state.settings.createdAt ||= firstUse();
   state.version = SCHEMA_VERSION;
 }
+
+const firstUse = () => Date.parse(state.history[0]?.d) || Date.now();
 
 function normalizeLot(l) {
   return {
@@ -118,14 +125,41 @@ export function exportJSON() {
 export function importJSON(text) {
   const d = JSON.parse(text);
   if (!d || typeof d !== 'object' || !Array.isArray(d.positions)) throw new Error('Ficheiro inválido');
+  snapshotForUndo('import');
   hydrate({ ...d, version: d.version ?? 1 }, { keepCache: true });
   state.cache.stockPrices = {};
   state.cache.stockMiss = {};
 }
 
 export function wipe() {
+  snapshotForUndo('wipe');
   state.positions = []; state.closed = []; state.cash = []; state.alerts = []; state.history = [];
   state.cache.prices = {}; state.cache.stockPrices = {}; state.cache.stockMiss = {};
+}
+
+/* ---------- desfazer importação / apagamento ---------- */
+
+const UNDO_KEY = `${STORAGE_KEY}_undo`;
+
+/** Guarda uma cópia dos dados atuais antes de os substituir (só se houver dados). */
+export function snapshotForUndo(reason) {
+  if (!hasData()) return;
+  try { localStorage.setItem(UNDO_KEY, JSON.stringify({ ts: Date.now(), reason, data: JSON.parse(exportJSON()) })); } catch { /* sem espaço */ }
+}
+
+export function readUndo() {
+  try {
+    const u = JSON.parse(localStorage.getItem(UNDO_KEY));
+    return u?.data && Array.isArray(u.data.positions) ? u : null;
+  } catch { return null; }
+}
+
+export function restoreUndo() {
+  const u = readUndo();
+  if (!u) return false;
+  hydrate(u.data, { keepCache: true });
+  try { localStorage.removeItem(UNDO_KEY); } catch { /* ignorado */ }
+  return true;
 }
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);

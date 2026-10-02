@@ -1,11 +1,12 @@
 import { REFRESH, STORAGE_KEY } from './config.js';
-import { state, load, save, subscribe, commit } from './store.js';
+import { state, load, save, subscribe, commit, hasData } from './store.js';
+import { saveBackup, snoozeBackup, requestPersistence } from './backup.js';
 import { refresh, onAlerts, net } from './quotes/index.js';
 import { renderAll, renderStatus, renderView, ui } from './ui/render.js';
 import { $, $$, toast, closeModal, modalOpen } from './ui/dom.js';
 import { applyAccent } from './ui/theme.js';
 import { initBackground } from './ui/background.js';
-import { modalAdd, modalReinforce, modalClose, modalStockPrice, deletePosition, deleteClosed } from './ui/modal-position.js';
+import { modalAdd, modalReinforce, modalClose, modalStockPrice, deletePosition, undoSale } from './ui/modal-position.js';
 import { modalAlert, notifyAlerts } from './ui/modal-alert.js';
 import { modalCash } from './ui/modal-cash.js';
 import { modalSettings, configureSettings } from './ui/modal-settings.js';
@@ -58,12 +59,22 @@ const ACTIONS = {
   alert: modalAlert,
   price: modalStockPrice,
   delete: deletePosition,
-  'delete-closed': deleteClosed,
+  'undo-sale': undoSale,
   'toggle-lots': id => {
     if (!ui.expanded.delete(id)) ui.expanded.add(id);
     renderView();
   },
   'chart-range': (_, el) => { ui.chartDays = +el.dataset.days; renderView(); },
+  'backup-now': async () => {
+    if (!(await saveBackup())) return;
+    commit();
+    toast('Backup guardado');
+  },
+  'backup-later': () => {
+    snoozeBackup();
+    commit();
+    toast('Lembro-te daqui a 7 dias');
+  },
 };
 
 document.addEventListener('click', e => {
@@ -124,3 +135,4 @@ setInterval(renderStatus, 30_000);
 schedule();
 refresh();
 initPWA();
+if (hasData()) requestPersistence();
