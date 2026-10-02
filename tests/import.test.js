@@ -82,7 +82,7 @@ const K = (id, type, date, comment, sym, amount) => [null, id, type, at(date), c
 
 const SAMPLE = {
   open: [
-    O(11, 'VUAA.DE', 1, 90, '2025-04-24', 90.04, 112.7), O(12, 'VUAA.DE', 0.5, 100, '2025-08-01', 50, 112.7),
+    O(11, 'VUAA.DE', 2, 95, '2025-04-15', 190.1, 112.7), O(12, 'VUAA.DE', 0.5, 120, '2025-07-21', 60, 112.7),
     O(13, 'AAPL.US', 2, 200, '2025-06-02', 342.86, 250),
   ],
   closed: [
@@ -108,7 +108,7 @@ const sample = async (opts, data = SAMPLE) => parseXtb(await readXlsx(makeXlsx(x
 test('xlsx: colunas, datas do Excel, texto partilhado e entidades', async () => {
   assert.equal(colIndex('A1'), 0);
   assert.equal(colIndex('AB12'), 27);
-  assert.equal(excelDate(45771.378), '2025-04-24');
+  assert.equal(excelDate(45762.62), '2025-04-15');
   assert.equal(excelDate(46023), '2026-01-01');
   assert.equal(excelDate(''), '');
   const rows = parseSheet('<sheetData><row r="2"><c r="B2" t="inlineStr"><is><t>P&amp;L &lt;x&gt;</t></is></c><c r="D2"><v>1.5</v></c></row></sheetData>');
@@ -143,7 +143,7 @@ test('XTB: lê posições abertas, vendas, dividendos e ignora CFDs', async () =
   assert.deepEqual(s.period, { from: '2025-01-01', to: '2026-01-01' });
   assert.equal(s.snapshot, '2026-01-01');
   assert.deepEqual(s.open.map(r => [r.y, r.units, r.cost, r.date, r.quoteCur]), [
-    ['VUAA.DE', 1, 90.04, '2025-04-24', 'EUR'], ['VUAA.DE', 0.5, 50, '2025-08-01', 'EUR'], ['AAPL', 2, 342.86, '2025-06-02', 'USD'],
+    ['VUAA.DE', 2, 190.1, '2025-04-15', 'EUR'], ['VUAA.DE', 0.5, 60, '2025-07-21', 'EUR'], ['AAPL', 2, 342.86, '2025-06-02', 'USD'],
   ]);
   assert.equal(s.open[2].lastPrice, 250);
   assert.deepEqual(s.closed.map(r => [r.y, r.units, r.cost, r.proceeds, r.date, r.closeDate]), [
@@ -174,7 +174,7 @@ test('importar: cria posições, agrupa vendas e liga dividendos; reimportar nã
   const vuaa = state.positions.find(p => p.quoteSymbol === 'VUAA.DE');
   assert.equal(vuaa.platform, 'XTB');
   assert.equal(vuaa.lots.length, 2);
-  assert.equal(vuaa.openedAt, '2025-04-24');
+  assert.equal(vuaa.openedAt, '2025-04-15');
   const edp = state.closed.find(c => c.quoteSymbol === 'EDP.LS');
   assert.equal(edp.lots.length, 2);
   assert.equal(edp.proceeds, 5550);
@@ -192,8 +192,8 @@ test('importar: o ano seguinte fecha compras importadas antes', async () => {
   reset();
   applyImport(planImport(await sample()));
   const next = await sample({}, {
-    open: [O(12, 'VUAA.DE', 0.5, 100, '2025-08-01', 50, 120)],
-    closed: [C(11, 'VUAA.DE', 1, 90, '2025-04-24', 90.04, '2026-03-02', 115, 115)],
+    open: [O(12, 'VUAA.DE', 0.5, 120, '2025-07-21', 60, 120)],
+    closed: [C(11, 'VUAA.DE', 2, 95, '2025-04-15', 190.1, '2026-03-02', 115, 230)],
     cash: [],
   });
   const plan = planImport(next);
