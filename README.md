@@ -48,7 +48,7 @@ A app usa módulos ES, por isso tem de ser servida por HTTP (não abre com duplo
 
 ### Worker da Cloudflare: cotações fiáveis + sincronização (recomendado)
 
-Um único Worker grátis na Cloudflare (~5 minutos a criar — vê [`worker/README.md`](worker/README.md) ou, na app, **⚙ → Sincronização → Como criar**):
+Um único Worker grátis na Cloudflare, criado com 1 clique — [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/CipherVault-PT/SelfFinancialManager/tree/main/worker) (detalhes em [`worker/README.md`](worker/README.md) ou, na app, **⚙ → Sincronização → Como criar**):
 
 - **Cotações**: o Yahoo não permite pedidos diretos do browser; com o teu Worker todas as ações ficam ao vivo de forma fiável. Sem ele, a app usa intermediários públicos (allorigins, corsproxy, codetabs), que às vezes falham.
 - **Sincronização**: os mesmos dados no telemóvel e no computador, automaticamente. Os dados vão **cifrados no dispositivo** com a tua frase-passe (AES-256-GCM, PBKDF2) — nem a Cloudflare os consegue ler. Se mudares dados nos dois lados ao mesmo tempo, a app pergunta qual versão manter.
@@ -91,7 +91,7 @@ js/
   ui/                   render, modais, formulário de entradas, tema, fundo animado
   pwa.js                instalação e service worker
   sync/                 sincronização: crypto.js (cifra) e engine.js (enviar, receber, conflitos)
-worker/                 Cloudflare Worker (cotações + cofre cifrado para a sincronização)
+worker/                 Cloudflare Worker (cotações + cofre cifrado) + wrangler.jsonc para o botão "Deploy to Cloudflare"
 tests/                  testes (node --test)
 ```
 

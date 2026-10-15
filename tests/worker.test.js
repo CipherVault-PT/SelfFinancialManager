@@ -63,3 +63,15 @@ test('worker: cofre com chave, versões, conflitos e limite de tentativas', asyn
   assert.equal((await req(env, 'DELETE', '/sync', { auth })).status, 204);
   assert.equal(env.SYNC.m.size, 0);
 });
+
+test('worker: configuração do botão "Deploy to Cloudflare" aponta para o código e cria o cofre SYNC', async () => {
+  const { readFile, access } = await import('node:fs/promises');
+  const dir = new URL('../worker/', import.meta.url);
+  const cfg = JSON.parse((await readFile(new URL('wrangler.jsonc', dir), 'utf8')).replace(/^\s*\/\/.*$/gm, ''));
+  await access(new URL(cfg.main, dir));
+  assert.match(cfg.compatibility_date, /^\d{4}-\d{2}-\d{2}$/);
+  assert.deepEqual(cfg.kv_namespaces, [{ binding: 'SYNC' }], 'sem id: a Cloudflare cria o namespace');
+  const pkg = JSON.parse(await readFile(new URL('package.json', dir), 'utf8'));
+  assert.equal(pkg.type, 'module');
+  assert.ok(!pkg.dependencies && !pkg.devDependencies, 'pasta isolada, sem dependências');
+});

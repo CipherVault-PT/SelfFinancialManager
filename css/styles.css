@@ -542,5 +542,9 @@ body.locked{overflow:hidden}
 .guide-n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--brass-dim);color:var(--brass-2);display:grid;place-items:center;font-size:12px;font-weight:600}
 .guide-step code,.mlead code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:5px}
 .guide-code{height:140px;font-size:11px;margin-bottom:10px}
+a.btn{text-decoration:none}
+.guide-alt{margin:2px 0 4px;font-size:13px}
+.guide-alt summary{cursor:pointer;color:var(--muted);padding:6px 0 10px;list-style-position:inside}
+.guide-alt[open] summary{color:var(--text)}
 .sync-opt{display:flex;flex-direction:column;gap:2px;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13.5px}
 .sync-opt span{color:var(--muted);font-size:12.5px}

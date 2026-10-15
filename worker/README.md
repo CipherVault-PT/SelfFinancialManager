@@ -10,22 +10,29 @@ Um único Worker, grátis, faz duas coisas:
 
 O plano gratuito chega e sobra (100 000 pedidos por dia; a app faz dezenas).
 
-## Criar (~5 minutos, de preferência no computador)
+## Criar com 1 clique (também no telemóvel)
 
-1. Cria conta grátis em <https://dash.cloudflare.com/sign-up> (ou entra na que já tens).
-2. **Cofre**: no menu, **Storage & Databases → KV → Create** → nome `aurora-sync`.
-3. **Worker**: **Workers & Pages → Create → Create Worker** → nome `aurora` → **Deploy**.
-4. Carrega em **Edit code**, apaga o código de exemplo e cola o conteúdo de [`aurora-worker.js`](./aurora-worker.js)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/CipherVault-PT/SelfFinancialManager/tree/main/worker)
+
+1. Carrega no botão, entra na Cloudflare (ou cria conta grátis) e liga o GitHub quando pedir — a Cloudflare guarda lá
+   uma cópia desta pasta e instala o Worker a partir dela.
+2. Deixa o nome `aurora` e carrega em **Create and deploy**. O cofre (KV com o nome `SYNC`) é criado e ligado sozinho
+   ([`wrangler.jsonc`](./wrangler.jsonc)).
+3. Copia o endereço do Worker (ex: `https://aurora.o-teu-nome.workers.dev`) e confirma em `/status` que aparece
+   `"app":"aurora"` e `"sync":true`.
+4. Na app: **⚙ → Sincronização → Ligar** → o endereço e uma frase-passe (10+ caracteres; o ideal são 4 palavras).
+   As cotações passam a usar o mesmo Worker. Nos outros dispositivos: **o mesmo endereço e a mesma frase-passe**.
+
+## Criar à mão (sem GitHub, de preferência no computador)
+
+1. **Cofre**: em <https://dash.cloudflare.com>, **Storage & Databases → KV → Create** → nome `aurora-sync`.
+2. **Worker**: **Workers & Pages → Create → Create Worker** → nome `aurora` → **Deploy**.
+3. Carrega em **Edit code**, apaga o código de exemplo e cola o conteúdo de [`aurora-worker.js`](./aurora-worker.js)
    (na app: ⚙ → Sincronização → Como criar → **Copiar o código do Worker**) → **Deploy**.
-5. **Ligar o cofre ao Worker**: no Worker, **Settings → Bindings → Add → KV namespace** → nome da variável `SYNC`,
+   No telemóvel, o editor da Cloudflare costuma recusar colar — usa o botão acima ou um computador.
+4. **Ligar o cofre ao Worker**: no Worker, **Settings → Bindings → Add → KV namespace** → nome da variável `SYNC`,
    namespace `aurora-sync` → **Deploy**.
-6. Copia o endereço do Worker (ex: `https://aurora.o-teu-nome.workers.dev`).
-7. Na app:
-   - **⚙ → Cotações → Atalho**: cola o endereço e carrega em **Testar**;
-   - **⚙ → Sincronização → Ligar**: o mesmo endereço e uma frase-passe (10+ caracteres; o ideal são 4 palavras).
-   - Nos outros dispositivos: **Ligar** com o **mesmo endereço e a mesma frase-passe**.
-
-Já tinhas o atalho antigo das cotações? Troca o código (passo 4) e faz os passos 2 e 5 — o endereço mantém-se.
+5. Na app, como no passo 4 acima.
 
 ## Como funciona a sincronização
 

@@ -1,0 +1,13 @@
+{
+  "name": "aurora-worker",
+  "private": true,
+  "type": "module",
+  "description": "Worker da Aurora Investments: cotações + cofre cifrado para a sincronização.",
+  "cloudflare": {
+    "bindings": {
+      "SYNC": {
+        "description": "Cofre onde fica a cópia **cifrada** dos teus dados (só a app a consegue ler). Deixa a Cloudflare criar um novo."
+      }
+    }
+  }
+}
