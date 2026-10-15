@@ -17,13 +17,15 @@ import { modalClassify } from './ui/modal-classify.js';
 import { modalImport } from './ui/modal-import.js';
 import { modalPlan, modalPlanRun, skipPlan, modalGoal, modalTargets } from './ui/modal-planning.js';
 import { initPWA } from './pwa.js';
-import { initLock } from './ui/lock-screen.js';
+import { initLock, isLocked } from './ui/lock-screen.js';
+import { initSync, sync } from './sync/engine.js';
+import { showConflict } from './ui/modal-sync.js';
 import { num } from './format.js';
 
 load();
 state.settings.accent = applyAccent(state.settings.accent);
 save();
-initLock({ onUnlock: () => refresh() });
+initLock({ onUnlock: () => { refresh(); if (sync.conflict) showConflict(); } });
 
 const background = initBackground($('#aurC'), () => state.settings.bgStyle);
 
@@ -165,5 +167,14 @@ document.addEventListener('visibilitychange', () => {
 setInterval(renderStatus, 30_000);
 schedule();
 refresh();
+initSync({
+  onApplied: () => {
+    state.settings.accent = applyAccent(state.settings.accent);
+    background.restart();
+    schedule();
+  },
+  onConflict: () => { if (!isLocked()) showConflict(); },
+  onStatus: () => renderStatus(),
+});
 initPWA();
 if (hasData()) requestPersistence();

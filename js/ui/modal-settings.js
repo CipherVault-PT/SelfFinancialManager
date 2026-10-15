@@ -8,6 +8,8 @@ import { esc, price, num, ago } from '../format.js';
 import { $, toast, openModal, closeModal, segmented } from './dom.js';
 import { applyAccent } from './theme.js';
 import { lockSection, bindLockSection } from './modal-lock.js';
+import { syncSection, bindSyncSection } from './modal-sync.js';
+import { syncEnabled, checkWorker } from '../sync/engine.js';
 
 let hooks = { onBackground() {}, onSchedule() {} };
 export const configureSettings = h => { hooks = { ...hooks, ...h }; };
@@ -40,12 +42,12 @@ export function modalSettings() {
 
     <div class="sep"></div>
     <div class="set-sec">📡 Cotações</div>
-    <div class="field"><label for="sProxy">Atalho de cotações (Cloudflare Worker)</label>
+    <div class="field"><label for="sProxy">Atalho de cotações (o teu Worker da Cloudflare)</label>
       <div class="pqrow"><input class="inp mono" id="sProxy" value="${esc(s.proxyUrl || '')}" placeholder="https://o-teu-atalho.workers.dev" autocomplete="off" spellcheck="false">
         <button type="button" class="btn ghost" id="sProxyTest">Testar</button></div>
       <div class="sd" id="sProxyInfo" style="margin-top:6px">${hasProxy
         ? '<span style="color:var(--up)">● Atalho ativo</span> — as ações e ETFs leem cotações do Yahoo por aqui.'
-        : 'Opcional, mas recomendado: um atalho próprio (grátis, ~3 min a criar — vê <b>worker/README.md</b> no repositório) deixa todas as ações ao vivo de forma fiável. Sem ele, a app usa intermediários públicos, que às vezes falham.'}</div></div>
+        : 'Opcional, mas recomendado: o teu Worker (grátis, ~5 min — vê ⚙ → Sincronização → <b>Como criar</b>) deixa todas as ações ao vivo de forma fiável e também sincroniza os dados entre dispositivos. Sem ele, a app usa intermediários públicos, que às vezes falham.'}</div></div>
     <div class="field"><label for="sKey">Chave Twelve Data <span class="sublbl">reserva, opcional</span> <a class="lnk" href="https://twelvedata.com/register" target="_blank" rel="noopener">obter →</a></label>
       <input class="inp mono" id="sKey" value="${esc(s.apiKey || '')}" placeholder="opcional — só como reserva" autocomplete="off" spellcheck="false">
       <div class="sd" style="margin-top:6px">${(s.apiKey || '').trim() ? '<span style="color:var(--up)">● Reserva ativa.</span> ' : ''}Só é usada se o Yahoo não responder para alguma ação (o plano grátis cobre sobretudo os EUA).</div></div>
@@ -53,18 +55,21 @@ export function modalSettings() {
       <div class="mseg cur5" id="sRefresh">${REFRESH_OPTS.map(([m, l]) => `<button type="button" data-m="${m}" class="${(s.refreshMin || 0) === m ? 'on' : ''}">${l}</button>`).join('')}</div>
       <div class="sd" style="margin-top:8px">A cripto atualiza a cada minuto. Toca em <b>↻</b> para forçar tudo na hora.</div></div>
 
+    ${syncSection()}
     ${lockSection()}
 
     <div class="sep"></div>
     <div class="set-sec">🛟 Dados e segurança</div>
-    <p class="mlead" style="margin-bottom:10px">Os teus dados ficam <b>só neste dispositivo</b> — nada é enviado para servidores. Guarda backups regularmente.</p>
+    <p class="mlead" style="margin-bottom:10px">${syncEnabled()
+      ? 'Os teus dados ficam neste dispositivo e, <b>cifrados com a tua frase-passe</b>, no teu Worker. Guarda também backups de vez em quando.'
+      : 'Os teus dados ficam <b>só neste dispositivo</b> — nada é enviado para servidores. Guarda backups regularmente.'}</p>
     <div class="set-row"><div><div class="sl">Armazenamento</div><div class="sd" id="sPersist">A verificar…</div></div></div>
     <div class="set-row"><div><div class="sl">Cópia de segurança</div><div class="sd">${backupInfo()}</div></div></div>
     <div class="row2"><button type="button" class="btn ghost" id="sExp" style="justify-content:center">↓ Guardar backup</button>
       <button type="button" class="btn ghost" id="sImp" style="justify-content:center">↑ Repor backup</button></div>
     <button type="button" class="btn ghost wide" data-action="import" style="margin-top:10px">📄 Importar extrato da corretora <span class="sublbl">XTB</span></button>
     <input type="file" id="sFile" accept="application/json,.json" class="hide">
-    ${undo ? `<button type="button" class="btn ghost wide" id="sUndo" style="margin-top:10px">↶ Repor os dados de antes ${undo.reason === 'wipe' ? 'de apagar tudo' : 'da importação'} <span class="sublbl">${undoWhen(undo.ts)}</span></button>` : ''}
+    ${undo ? `<button type="button" class="btn ghost wide" id="sUndo" style="margin-top:10px">↶ Repor os dados de antes ${undo.reason === 'wipe' ? 'de apagar tudo' : undo.reason === 'sync' ? 'da sincronização' : 'da importação'} <span class="sublbl">${undoWhen(undo.ts)}</span></button>` : ''}
     <div class="sep"></div>
     <button type="button" class="btn danger ghost wide" id="sWipe">Apagar tudo</button>`);
 
@@ -107,8 +112,11 @@ export function modalSettings() {
     const t0 = performance.now();
     const q = await yahooQuote('AAPL').catch(() => null);
     s.proxyUrl = prev;
+    const st = v ? await checkWorker(v).catch(() => null) : null;
+    const vault = !v ? '' : !st ? ' Este atalho tem o código antigo — atualiza-o para teres também a sincronização (⚙ → Sincronização → Como criar).'
+      : st.sync ? ' Cofre de sincronização: ligado.' : ' Cofre de sincronização: por ligar (KV com o nome SYNC).';
     info.innerHTML = q
-      ? `<span style="color:var(--up)">● A funcionar</span> — AAPL ${price(q.price, q.cur)} em ${Math.round(performance.now() - t0)} ms${v ? '' : ' (via intermediário público)'}.`
+      ? `<span style="color:var(--up)">● A funcionar</span> — AAPL ${price(q.price, q.cur)} em ${Math.round(performance.now() - t0)} ms${v ? '' : ' (via intermediário público)'}.${vault}`
       : '<span style="color:var(--down)">● Sem resposta.</span> Confirma o endereço do atalho ou tenta mais tarde.';
   };
 
@@ -166,9 +174,10 @@ export function modalSettings() {
 
   showPersistence();
   bindLockSection(() => { modalSettings(); $('#lkSec')?.scrollIntoView({ block: 'start' }); });
+  bindSyncSection(() => { modalSettings(); $('#syncSec')?.scrollIntoView({ block: 'start' }); });
 
   $('#sWipe').onclick = () => {
-    if (!confirm('Apagar todas as posições, histórico, fundos e alertas?\n\nPodes repor os dados em Definições → “Repor os dados de antes de apagar tudo”.')) return;
+    if (!confirm(`Apagar todas as posições, histórico, fundos e alertas?\n\nPodes repor os dados em Definições → “Repor os dados de antes de apagar tudo”.${syncEnabled() ? '\n\nA sincronização está ligada: os outros dispositivos também ficam vazios (lá, os dados anteriores ficam para repor).' : ''}`)) return;
     wipe();
     commit();
     closeModal();
@@ -195,6 +204,5 @@ async function showPersistence() {
     const granted = await requestPersistence();
     toast(granted ? 'Armazenamento protegido' : 'O browser recusou — instala a app e faz backups', !granted);
     showPersistence();
-  bindLockSection(() => { modalSettings(); $('#lkSec')?.scrollIntoView({ block: 'start' }); });
   };
 }

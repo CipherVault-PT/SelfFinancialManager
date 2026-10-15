@@ -10,6 +10,7 @@ import { performance, benchmarkCompare, benchSeries, benchState, BENCHMARK, MIN_
 import { net } from '../quotes/index.js';
 import { backupDue, daysSinceBackup } from '../backup.js';
 import { saleCashLabel } from '../cash.js';
+import { syncBadge } from './modal-sync.js';
 import { hicpSeries, inflationSince, realRate } from '../inflation.js';
 import { plansDue, validPlan, plansMonthly } from '../plans.js';
 import { monthsToGoal, addMonths, fourPercentMonthly, DEFAULT_RATE } from '../goals.js';
@@ -84,8 +85,9 @@ export function renderStatus() {
   else if (!state.positions.length) label = fx;
   else if (!last) label = `Sem cotações · ${fx}`;
   else label = `Cotações ${ago(last)} · ${fx}${misses ? ` · ${misses} sem cotação` : ''}`;
-  txt.textContent = label;
-  $('.status').title = label;
+  const cloud = syncBadge();
+  txt.textContent = cloud ? `${label} · ${cloud}` : label;
+  $('.status').title = txt.textContent;
   dot.classList.toggle('stale', !last || Date.now() - last > REFRESH.liveQuoteMs);
   $('#btnRefresh').classList.toggle('spin', net.busy > 0 && net.manual);
 }

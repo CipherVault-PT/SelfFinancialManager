@@ -45,3 +45,14 @@ export function memoryStorage() {
   };
   return m;
 }
+
+/** KV da Cloudflare em memória (para testar o Worker). */
+export function memoryKV() {
+  const m = new Map();
+  return {
+    m,
+    get: async (k, type) => (m.has(k) ? (type === 'json' ? JSON.parse(m.get(k)) : m.get(k)) : null),
+    put: async (k, v) => { m.set(k, String(v)); },
+    delete: async k => { m.delete(k); },
+  };
+}
