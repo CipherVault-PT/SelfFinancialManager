@@ -17,6 +17,7 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Venda total ou parcial** (¼, ½, tudo ou qualquer quantidade) pelo método **FIFO** — as compras mais antigas saem primeiro, como manda o IRS.
 - **Anular uma venda** (as unidades voltam à posição) para corrigir erros.
 - Histórico de vendas com lucro realizado; fundos/cash com depósitos, juros e levantamentos.
+- **Para onde vai o dinheiro**: ao vender escolhes o destino — fica na corretora (saldo por investir, criado automaticamente), vai para um fundo (ex: fundo de emergência na Trade Republic) ou sai da app. Ao comprar ou reforçar podes pagar com esses saldos, para o património não contar o mesmo dinheiro duas vezes. A app lembra a última escolha de cada corretora; anular uma venda ou apagar uma posição desfaz os movimentos.
 - **Proteção dos dados**: pedido de armazenamento persistente ao browser, lembrete de backup (primeiro aos 3 dias, depois a cada 30), backup pela folha de partilha do telemóvel (Drive, email…) e **repor os dados** de antes de importar ou apagar tudo.
 - **Dividendos**: valor bruto, imposto retido na fonte e moeda, por ação (aberta ou já vendida); total e **retorno total** em cada posição, lista no Histórico e resumo dos últimos 12 meses no Painel.
 - **Relatório para o IRS**, por ano — mais-valias: uma linha por cada compra vendida (FIFO), valores em € (câmbio do BCE da data para contas noutra moeda), dias detido, totais de ações/ETFs e cripto (< 365 dias tributada; ≥ 365 dias excluída), imposto estimado à taxa de 28%; dividendos em € com o imposto retido no estrangeiro e o imposto adicional estimado; exportação CSV para Excel. É uma ajuda — não substitui o guia da corretora nem um contabilista.
@@ -62,6 +63,7 @@ js/
   format.js             formatação de valores, datas e números
   fx.js                 câmbio e conversões
   calc.js               cálculos de posições, P/L, taxas e totais
+  cash.js               dinheiro entre vendas, compras e fundos/saldos das corretoras
   history.js            histórico diário do património (em EUR)
   dividends.js          dividendos (registo, totais por posição, estatísticas)
   allocation.js         distribuição por setor, país e moeda; concentração
@@ -86,4 +88,4 @@ tests/                  testes (node --test)
 npm test
 ```
 
-Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, a distribuição (incluindo que todas as ações da base têm setor e país), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
+Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, o destino do dinheiro das vendas e compras, a distribuição (incluindo que todas as ações da base têm setor e país), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
