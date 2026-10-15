@@ -1,5 +1,5 @@
 // Service worker: rede primeiro (para receber sempre a versão nova) e cache como reserva offline.
-const CACHE = 'aurora-v10';
+const CACHE = 'aurora-v11';
 const SHELL = [
   './',
   './index.html',
