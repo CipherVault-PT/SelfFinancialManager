@@ -95,6 +95,10 @@ worker/                 Cloudflare Worker (cotações + cofre cifrado para a sin
 tests/                  testes (node --test)
 ```
 
+## Ideias
+
+Ideias faladas mas ainda por fazer (ou postas de parte) estão em [`IDEIAS.md`](IDEIAS.md).
+
 ## Testes
 
 ```bash
