@@ -8,9 +8,11 @@ import { searchCoins } from '../quotes/crypto.js';
 import { quoteFor, searchYahoo } from '../quotes/stocks.js';
 import { refresh } from '../quotes/index.js';
 import { requestPersistence } from '../backup.js';
+import { creditSale, debitBuy, dropCashRefs, saleCashLabel } from '../cash.js';
 import { esc, money, price, pct, signed, units, sym, num, inputNum, todayISO } from '../format.js';
 import { $, toast, openModal, closeModal, segmented, debounce } from './dom.js';
 import { lotForm } from './lot-form.js';
+import { cashPicker } from './cash-pick.js';
 import { ui } from './render.js';
 
 const header = title => `<div class="mh"><h3>${title}</h3><button type="button" class="x" data-action="modal-close" aria-label="Fechar">✕</button></div>`;
@@ -40,6 +42,7 @@ export function modalAdd() {
     <div class="field"><label>Moeda da conta <span class="sublbl">o dinheiro que usaste</span></label><div id="curArea"></div></div>
     <div id="amtArea"></div>
     <div class="preview" id="dPrev" hidden></div>
+    <div id="dCash"></div>
     <div class="field"><label for="dDate">Data de entrada</label><input class="inp" id="dDate" type="date" max="${todayISO()}" value="${todayISO()}"></div>
     <button type="button" class="btn pri wide" id="dSave">Adicionar posição</button>`);
 
@@ -51,9 +54,12 @@ export function modalAdd() {
     onChange: updatePreview,
   });
 
+  let pick = null;
+
   function updatePreview() {
     const pv = $('#dPrev');
     if (!pv) return;
+    pick?.update();
     const d = form.read();
     pv.hidden = !d.ok;
     if (!d.ok) return;
@@ -68,7 +74,7 @@ export function modalAdd() {
     if (!opts.includes(draft.currency)) draft.currency = 'EUR';
     $('#curArea').innerHTML = `<div class="mseg cur5" id="curSel">${opts.map(c => `<button type="button" data-c="${c}" class="${draft.currency === c ? 'on' : ''}">${esc(sym(c))}${draft.kind === 'crypto' ? ` ${c}` : ''}</button>`).join('')}</div>
       ${draft.kind === 'stock' ? '<div class="curhint">A moeda da tua <b>conta</b> na corretora. O preço por ação podes metê-lo na moeda em que cota.</div>' : ''}`;
-    segmented($('#curSel'), 'c', c => { draft.currency = c; form.render(); updatePreview(); });
+    segmented($('#curSel'), 'c', c => { draft.currency = c; pick?.render(); form.render(); updatePreview(); });
   }
 
   async function loadQuote(stock) {
@@ -214,12 +220,15 @@ export function modalAdd() {
     draft.kind = k; draft.coin = null; draft.stock = null; draft.manual = false; draft.quote = null; draft.quoteToken++;
     renderAsset(); renderCur(); form.render(); updatePreview();
   });
-  $('#dPlat').onchange = () => { form.renderAdj(); updatePreview(); };
+  $('#dPlat').onchange = () => { pick.render(); form.renderAdj(); updatePreview(); };
   $('#dSave').onclick = save;
 
   renderAsset();
   renderCur();
   form.render();
+  pick = cashPicker($('#dCash'), {
+    mode: 'buy', platform: () => $('#dPlat').value, currency: () => draft.currency, amount: () => form.read().cost,
+  });
 
   function save() {
     const d = form.read();
@@ -251,9 +260,10 @@ export function modalAdd() {
     }
     if (draft.quote && p.quoteSymbol) state.cache.stockPrices[p.quoteSymbol] = { ...draft.quote, ts: Date.now() };
     state.positions.push(p);
+    const used = debitBuy(pick.value(), { amount: d.cost, currency: p.currency, platform: p.platform, date, posId: p.id });
     commit();
     closeModal();
-    toast('Posição adicionada');
+    toast(`Posição adicionada${used > 0 ? ` · ${money(used, p.currency)} saíram do saldo` : ''}`);
     requestPersistence();
     refresh({ crypto: p.kind === 'crypto', stocks: p.kind === 'stock' && !draft.quote, force: true });
   }
@@ -269,6 +279,7 @@ export function modalReinforce(id) {
     <p class="mlead">Nova compra em <b>${esc(sym(cur))}</b>. Soma às entradas e recalcula o preço médio.</p>
     <div id="rAmt"></div>
     <div class="preview" id="rPrev" hidden></div>
+    <div id="rCash"></div>
     <div class="field"><label for="rDate">Data</label><input class="inp" id="rDate" type="date" max="${todayISO()}" value="${todayISO()}"></div>
     <button type="button" class="btn pri wide" id="rDo">Adicionar entrada</button>`);
 
@@ -276,8 +287,11 @@ export function modalReinforce(id) {
     kind: () => p.kind, moneyCur: () => cur, quoteCur: () => quoteCurOf(p), platform: () => p.platform, onChange: update,
   });
 
+  let pick = null;
+
   function update() {
     const pv = $('#rPrev');
+    pick?.update();
     const v = form.read();
     pv.hidden = !v.ok;
     if (!v.ok) return;
@@ -289,16 +303,19 @@ export function modalReinforce(id) {
       <div class="pr total"><span>Novo preço médio</span><b style="color:var(--brass-2);font-size:15px">${price(ad.value, ad.cur)}</b></div>`;
   }
 
+  pick = cashPicker($('#rCash'), { mode: 'buy', platform: () => p.platform, currency: () => cur, amount: () => form.read().cost });
   const live = metrics(p);
   if (live.live) form.prefillPrice(live.nativePrice, live.nativeCur);
 
   $('#rDo').onclick = () => {
     const v = form.read();
     if (!v.ok) return toast('Preenche os valores', true);
-    p.lots.push({ shares: v.units, cost: v.cost, priceQ: v.priceQ, priceCur: v.priceCur, date: $('#rDate').value || todayISO() });
+    const date = $('#rDate').value || todayISO();
+    p.lots.push({ shares: v.units, cost: v.cost, priceQ: v.priceQ, priceCur: v.priceCur, date });
+    const used = debitBuy(pick.value(), { amount: v.cost, currency: cur, platform: p.platform, date, posId: p.id });
     commit();
     closeModal();
-    toast('Reforço adicionado — média recalculada');
+    toast(`Reforço adicionado — média recalculada${used > 0 ? ` · ${money(used, cur)} do saldo` : ''}`);
   };
 }
 
@@ -325,6 +342,7 @@ export function modalClose(id) {
         <input class="inp mono" id="cExit" inputmode="decimal" autocomplete="off" value="${inputNum(m.nativePrice)}" data-autofocus></div>
       ${cross ? '<div id="cAdjArea"></div>' : ''}
       <div class="field"><label for="cDate">Data da venda</label><input class="inp" id="cDate" type="date" max="${todayISO()}" value="${todayISO()}"></div>
+      <div id="cCash"></div>
       <div class="preview big" id="cPrev"></div>
       <div class="curhint" id="cFifo" hidden>Venda parcial pelo método <b>FIFO</b> (as compras mais antigas saem primeiro), como manda o IRS. O preço médio das que ficam pode diferir do que a corretora mostra.</div>
     </div>
@@ -362,7 +380,9 @@ export function modalClose(id) {
     segmented($('#cAdjMode'), 'aj', v => { adj = v; renderAdj(); update(); });
   };
 
+  let pick = null;
   const update = () => {
+    pick?.update();
     const q = sellQty();
     const partial = q > 0 && q < m.u;
     const cost = q > 0 ? sellFIFO(p.lots, q, p.openedAt).sold.reduce((s, l) => s + l.cost, 0) : NaN;
@@ -387,6 +407,7 @@ export function modalClose(id) {
   });
   $('#cForm').oninput = update;
   renderAdj();
+  pick = cashPicker($('#cCash'), { mode: 'sale', platform: () => p.platform, currency: () => p.currency, amount: () => proceeds(sellQty()) });
   update();
 
   $('#cDo').onclick = () => {
@@ -409,10 +430,11 @@ export function modalClose(id) {
       p.lots = remaining;
     }
     state.closed.push(sale);
+    const dest = creditSale(pick.value(), { amount: pr, currency: p.currency, platform: p.platform, date: sale.closedAt, saleId: sale.id });
     commit();
     closeModal();
     const pl = pr - sold.reduce((s, l) => s + l.cost, 0);
-    toast(`${pl >= 0 ? 'Lucro' : 'Perda'} de ${money(Math.abs(pl), p.currency)}${full ? '' : ` · ficam ${units(qty(p))} ${unit}`}`);
+    toast(`${pl >= 0 ? 'Lucro' : 'Perda'} de ${money(Math.abs(pl), p.currency)}${full ? '' : ` · ficam ${units(qty(p))} ${unit}`}${dest ? ` · ${money(pr, p.currency)} → ${dest.label}` : ''}`);
   };
 }
 
@@ -443,6 +465,7 @@ export function deletePosition(id) {
   if (!p) return;
   if (!confirm(`Apagar "${p.name}"?\n\nÉ removida já e NÃO fica no histórico. Usa isto só para corrigir erros — para uma venda a sério, usa Vender.`)) return;
   state.positions = state.positions.filter(x => x.id !== id);
+  dropCashRefs(`pos:${id}`);
   dropAlertsFor(id);
   ui.expanded.delete(id);
   commit();
@@ -454,8 +477,10 @@ export function undoSale(id) {
   const rec = state.closed.find(x => x.id === id);
   if (!rec) return;
   const what = `${units(qty(rec))} ${rec.kind === 'crypto' ? 'unidades' : 'ações'}`;
-  if (!confirm(`Anular a venda de "${rec.name}"?\n\nAs ${what} voltam às posições abertas e o resultado desta venda deixa de contar.`)) return;
+  const dest = saleCashLabel(rec.id);
+  if (!confirm(`Anular a venda de "${rec.name}"?\n\nAs ${what} voltam às posições abertas e o resultado desta venda deixa de contar.${dest ? `\nO dinheiro sai de "${dest}".` : ''}`)) return;
   state.closed = state.closed.filter(x => x.id !== id);
+  dropCashRefs(`sale:${id}`);
   const posId = rec.parentId || rec.id;
   const target = findPos(posId);
   if (target) {

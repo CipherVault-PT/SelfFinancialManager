@@ -9,6 +9,7 @@ import { FLAGS } from '../data/classification.js';
 import { performance, benchmarkCompare, benchSeries, benchState, BENCHMARK, MIN_DAYS } from '../performance.js';
 import { net } from '../quotes/index.js';
 import { backupDue, daysSinceBackup } from '../backup.js';
+import { saleCashLabel } from '../cash.js';
 import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } from '../format.js';
 import { $, $$ } from './dom.js';
 
@@ -319,12 +320,14 @@ function viewHistory() {
   return `${sales ? salesSection() : ''}${dividendSection(!sales)}`;
 }
 
+const dest = id => { const l = saleCashLabel(id); return l ? ` · → ${esc(l)}` : ''; };
+
 function salesSection() {
   const d = disp();
   const rows = [...state.closed].reverse().map(p => {
     const m = closedM(p), plc = upDown(m.pl);
     return `<div class="hrow">
-      <div class="nm">${esc(p.name)}${p.partial ? ' <span class="chip">parcial</span>' : ''} <small>${esc(p.platform)} · ${esc(sym(p.currency))}${p.closedAt ? ` · ${esc(p.closedAt)}` : ''}</small></div>
+      <div class="nm">${esc(p.name)}${p.partial ? ' <span class="chip">parcial</span>' : ''} <small>${esc(p.platform)} · ${esc(sym(p.currency))}${p.closedAt ? ` · ${esc(p.closedAt)}` : ''}${dest(p.id)}</small></div>
       <div class="r">${units(m.u)}</div>
       <div class="r">${money(pCost(p), p.currency)} → ${money(m.proceeds, p.currency)}</div>
       <div class="r ${plc}">${signed(m.pl, money(m.pl, p.currency))}</div>
