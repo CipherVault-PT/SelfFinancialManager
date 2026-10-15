@@ -3,7 +3,7 @@ export const SCHEMA_VERSION = 2;
 
 export const PLATFORMS = ['Revolut', 'XTB', 'Trade Republic'];
 export const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'DKK'];
-export const DEFAULT_RATES = { EUR: 1, USD: 1.17, GBP: 0.86, CHF: 0.93, DKK: 7.46 };
+export const DEFAULT_RATES = { EUR: 1, USD: 1.17, GBP: 0.86, CHF: 0.93, DKK: 7.46, SEK: 11.1, NOK: 11.7 };
 
 /** Corretoras que não cobram taxa de conversão cambial. */
 export const NO_FX_FEE = ['Trade Republic', 'Revolut'];

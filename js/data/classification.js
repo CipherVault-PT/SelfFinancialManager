@@ -6,7 +6,8 @@ export const SECTORS = [
 
 export const COUNTRIES = [
   'EUA', 'Portugal', 'Alemanha', 'França', 'Países Baixos', 'Espanha', 'Itália', 'Reino Unido', 'Suíça',
-  'Dinamarca', 'Irlanda', 'Suécia', 'China', 'Japão', 'Taiwan', 'Canadá', 'Singapura', 'Brasil', 'Uruguai',
+  'Dinamarca', 'Irlanda', 'Suécia', 'Finlândia', 'Noruega', 'Bélgica', 'Áustria', 'Luxemburgo', 'China', 'Japão',
+  'Taiwan', 'Canadá', 'Singapura', 'Brasil', 'Uruguai', 'México', 'Índia', 'Austrália', 'Israel',
   'Global', 'Emergentes', 'Outro',
 ];
 
@@ -14,19 +15,22 @@ export const FLAGS = {
   'EUA': '🇺🇸', 'Portugal': '🇵🇹', 'Alemanha': '🇩🇪', 'França': '🇫🇷', 'Países Baixos': '🇳🇱', 'Espanha': '🇪🇸',
   'Itália': '🇮🇹', 'Reino Unido': '🇬🇧', 'Suíça': '🇨🇭', 'Dinamarca': '🇩🇰', 'Irlanda': '🇮🇪', 'Suécia': '🇸🇪',
   'China': '🇨🇳', 'Japão': '🇯🇵', 'Taiwan': '🇹🇼', 'Canadá': '🇨🇦', 'Singapura': '🇸🇬', 'Brasil': '🇧🇷',
-  'Uruguai': '🇺🇾', 'Global': '🌍', 'Emergentes': '🌏',
+  'Uruguai': '🇺🇾', 'Finlândia': '🇫🇮', 'Noruega': '🇳🇴', 'Bélgica': '🇧🇪', 'Áustria': '🇦🇹', 'Luxemburgo': '🇱🇺',
+  'México': '🇲🇽', 'Índia': '🇮🇳', 'Austrália': '🇦🇺', 'Israel': '🇮🇱', 'Global': '🌍', 'Emergentes': '🌏',
 };
 
 /** Bolsa (campo x da base) → país da empresa. */
 export const EXCHANGE_COUNTRY = {
   'Lisboa': 'Portugal', 'Xetra': 'Alemanha', 'Paris': 'França', 'Amesterdão': 'Países Baixos', 'Madrid': 'Espanha',
   'Milão': 'Itália', 'Londres': 'Reino Unido', 'Zurique': 'Suíça', 'Copenhaga': 'Dinamarca', 'Dublin': 'Irlanda',
+  'Estocolmo': 'Suécia', 'Helsínquia': 'Finlândia', 'Bruxelas': 'Bélgica', 'Oslo': 'Noruega', 'Viena': 'Áustria',
 };
 
 /** Sufixo Yahoo → país (para ações fora da base local). */
 export const SUFFIX_COUNTRY = {
   '.LS': 'Portugal', '.DE': 'Alemanha', '.F': 'Alemanha', '.PA': 'França', '.AS': 'Países Baixos', '.MC': 'Espanha',
   '.MI': 'Itália', '.L': 'Reino Unido', '.SW': 'Suíça', '.CO': 'Dinamarca', '.IR': 'Irlanda', '.ST': 'Suécia',
+  '.HE': 'Finlândia', '.BR': 'Bélgica', '.OL': 'Noruega', '.VI': 'Áustria',
   '.HK': 'China', '.SS': 'China', '.SZ': 'China', '.T': 'Japão', '.TW': 'Taiwan', '.TO': 'Canadá', '.SA': 'Brasil',
 };
 

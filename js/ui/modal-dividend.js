@@ -1,6 +1,9 @@
 import { commit } from '../store.js';
 import { dividendsFor, dividendAssets, addDividend, removeDividend, netOf, HIGH_WITHHOLDING } from '../dividends.js';
 import { esc, money, num, sym, todayISO, pct } from '../format.js';
+import { conv } from '../fx.js';
+import { creditCash } from '../cash.js';
+import { cashPicker } from './cash-pick.js';
 import { $, $$, toast, openModal, segmented, modalEl } from './dom.js';
 
 const header = `<div class="mh"><h3>Dividendos</h3><button type="button" class="x" data-action="modal-close" aria-label="Fechar">✕</button></div>`;
@@ -43,6 +46,7 @@ export function modalDividend(posId) {
         <div class="field"><label for="vTax">Imposto retido <span class="sublbl">opcional</span></label><input class="inp mono" id="vTax" inputmode="decimal" autocomplete="off" placeholder="0,00"></div>
       </div>
       <div class="curhint" id="vHint">O extrato da corretora mostra o <b>valor bruto</b> e o <b>imposto retido na fonte</b> (ex: 15% nos EUA com o W-8BEN).</div>
+      <div id="vCash" style="margin-top:12px"></div>
       <button type="button" class="btn pri wide" id="vDo" style="margin-top:14px">Registar dividendo</button>`);
 
     const sel = $('#vAsset');
@@ -63,8 +67,12 @@ export function modalDividend(posId) {
       $('#vHint').innerHTML = `Líquido: <b>${money(g - t, cur)}</b>${t > 0 ? ` · retenção de ${pct(rate * 100).replace('+', '')}` : ''}${rate > HIGH_WITHHOLDING + 1e-6
         ? `<br><span style="color:var(--down)">Retenção acima de ${HIGH_WITHHOLDING * 100}%: o excedente normalmente não é dedutível no IRS. Nas ações dos EUA, preenche o formulário W-8BEN na corretora.</span>` : ''}`;
     };
-    $('#vGross').oninput = hint;
-    $('#vTax').oninput = hint;
+    const net = () => Math.max(0, (num($('#vGross').value) || 0) - (num($('#vTax').value) || 0));
+    const pick = asset ? cashPicker($('#vCash'), {
+      mode: 'sale', platform: () => asset.platform, currency: () => asset.currency, amount: () => conv(net(), cur, asset.currency),
+    }) : null;
+    $('#vGross').oninput = () => { hint(); pick?.update(); };
+    $('#vTax').oninput = () => { hint(); pick?.update(); };
 
     $('#vDo').onclick = () => {
       if (!asset) return toast('Escolhe o ativo', true);
@@ -73,9 +81,12 @@ export function modalDividend(posId) {
       if (!(gross > 0)) return toast('Indica o valor bruto', true);
       if (withheld < 0 || withheld >= gross) return toast('O imposto retido tem de ser menor que o valor bruto', true);
       if (!date) return toast('Indica a data', true);
-      addDividend(asset, { date, gross, withheld, currency: cur });
+      const d = addDividend(asset, { date, gross, withheld, currency: cur });
+      const dest = pick && creditCash(pick.value(), {
+        amount: gross - withheld, currency: cur, accountCurrency: asset.currency, platform: asset.platform, date, ref: `div:${d.id}`, kind: 'dividend',
+      });
       commit();
-      toast(`Dividendo de ${money(gross - withheld, cur)} registado`);
+      toast(`Dividendo de ${money(gross - withheld, cur)} registado${dest ? ` → ${dest.label}` : ''}`);
       draw();
     };
   }

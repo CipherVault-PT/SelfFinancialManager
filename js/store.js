@@ -107,7 +107,7 @@ function normalizeDividend(x) {
   };
 }
 
-const CASH_KINDS = ['deposit', 'interest', 'sale', 'buy', 'transfer'];
+const CASH_KINDS = ['deposit', 'interest', 'sale', 'buy', 'transfer', 'dividend'];
 
 function normalizeCash(c) {
   const entries = Array.isArray(c.entries)
