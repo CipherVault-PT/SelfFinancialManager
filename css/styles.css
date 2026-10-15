@@ -535,3 +535,12 @@ body.locked{overflow:hidden}
 .tg-in .inp{width:76px;padding:8px 10px;text-align:right}
 .tg-sum{margin-top:10px;font-size:13px;color:var(--muted)}
 .tg-sum .warn{color:var(--brass-2)}
+
+/* --- v3.0: sincronização --- */
+.guide{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.guide-step{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.5;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.guide-n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--brass-dim);color:var(--brass-2);display:grid;place-items:center;font-size:12px;font-weight:600}
+.guide-step code,.mlead code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:5px}
+.guide-code{height:140px;font-size:11px;margin-bottom:10px}
+.sync-opt{display:flex;flex-direction:column;gap:2px;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13.5px}
+.sync-opt span{color:var(--muted);font-size:12.5px}

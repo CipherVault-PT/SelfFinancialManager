@@ -30,6 +30,7 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Meta**: objetivo de património, valor por mês e rentabilidade estimada (ou a tua TIR); progresso, data estimada para lá chegares, cenários a ±2% e a regra dos 4%.
 - **Rebalancear**: alocação alvo por ativo (o mesmo ETF em várias corretoras conta junto) e quanto pôr em cada um no próximo investimento para te aproximares do alvo sem vender.
 - **Rentabilidade sem a inflação**: o ganho em poder de compra, descontando a inflação de Portugal (IHPC mensal do BCE).
+- **Sincronização entre dispositivos** cifrada de ponta a ponta, através do teu Worker da Cloudflare (ver abaixo).
 - **Alertas de preço** com notificações.
 - **Gráfico da evolução do património** (1M / 3M / 1A / Tudo).
 - Funciona offline com os últimos dados (service worker).
@@ -45,11 +46,12 @@ A app usa módulos ES, por isso tem de ser servida por HTTP (não abre com duplo
   ```
   Depois abre <http://localhost:5173>.
 
-### Cotações de ações fiáveis (recomendado)
+### Worker da Cloudflare: cotações fiáveis + sincronização (recomendado)
 
-O Yahoo não permite pedidos diretos do browser. Cria o teu atalho grátis na Cloudflare em ~3 minutos: vê [`worker/README.md`](worker/README.md). Depois cola o endereço em **⚙ Definições → Cotações**.
+Um único Worker grátis na Cloudflare (~5 minutos a criar — vê [`worker/README.md`](worker/README.md) ou, na app, **⚙ → Sincronização → Como criar**):
 
-Sem atalho, a app usa intermediários públicos (allorigins, corsproxy, codetabs), que funcionam mas às vezes falham.
+- **Cotações**: o Yahoo não permite pedidos diretos do browser; com o teu Worker todas as ações ficam ao vivo de forma fiável. Sem ele, a app usa intermediários públicos (allorigins, corsproxy, codetabs), que às vezes falham.
+- **Sincronização**: os mesmos dados no telemóvel e no computador, automaticamente. Os dados vão **cifrados no dispositivo** com a tua frase-passe (AES-256-GCM, PBKDF2) — nem a Cloudflare os consegue ler. Se mudares dados nos dois lados ao mesmo tempo, a app pergunta qual versão manter.
 
 ## Estrutura
 
@@ -88,7 +90,8 @@ js/
   quotes/               cotações: crypto.js, stocks.js e index.js (orquestração)
   ui/                   render, modais, formulário de entradas, tema, fundo animado
   pwa.js                instalação e service worker
-worker/                 Cloudflare Worker (atalho de cotações)
+  sync/                 sincronização: crypto.js (cifra) e engine.js (enviar, receber, conflitos)
+worker/                 Cloudflare Worker (cotações + cofre cifrado para a sincronização)
 tests/                  testes (node --test)
 ```
 
@@ -98,4 +101,4 @@ tests/                  testes (node --test)
 npm test
 ```
 
-Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, o destino do dinheiro das vendas e compras, as transferências, os planos de poupança, as metas, o rebalanceamento, a inflação, a distribuição (incluindo que todas as ações da base têm setor e país), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
+Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, o destino do dinheiro das vendas e compras, as transferências, os planos de poupança, as metas, o rebalanceamento, a inflação, a sincronização (dois dispositivos contra o Worker com um cofre simulado), a distribuição (incluindo que todas as ações da base têm setor e país), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
