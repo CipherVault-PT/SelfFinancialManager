@@ -6,18 +6,30 @@ import { $, $$, toast, openModal, segmented, modalEl } from './dom.js';
 
 const opts = list => list.map(x => `<option>${esc(x)}</option>`).join('');
 
+const ENTRY = { interest: '💰 Juros', sale: '↩ Venda', buy: '↗ Compra' };
+const entryLabel = e => ENTRY[e.kind] ?? (e.amount < 0 ? 'Levantamento' : 'Depósito');
+
+function breakdown(b, cur) {
+  return [
+    (b.deposit || (!b.sale && !b.buy)) && `Depositado ${money(b.deposit, cur)}`,
+    b.interest > 0 && `<span style="color:var(--up)">Juros ${money(b.interest, cur)}</span>`,
+    b.sale > 0 && `De vendas ${money(b.sale, cur)}`,
+    b.buy < 0 && `Usado em compras ${money(-b.buy, cur)}`,
+  ].filter(Boolean).join(' · ');
+}
+
 export function modalCash() {
   const open = new Set();
   const draw = () => {
     openModal(`<div class="mh"><h3>Fundo / Cash</h3><button type="button" class="x" data-action="modal-close" aria-label="Fechar">✕</button></div>
-      <p class="mlead">Dinheiro parado ou fundo de emergência (ex: liquidez na Trade Republic). Vais somando o teu dinheiro e os juros recebidos — ambos entram no património total.</p>
+      <p class="mlead">Dinheiro parado ou fundo de emergência (ex: liquidez na Trade Republic) e o saldo por investir de cada corretora. Quando vendes, escolhes para onde vai o dinheiro; quando compras, podes pagar com estes saldos. Tudo entra no património total.</p>
       ${state.cash.length ? `<div class="cashlist">${state.cash.map(c => {
         const b = cashBreak(c), ents = cashEntries(c), id = esc(c.id);
         return `<div class="cashcard">
-          <div class="cashtop"><div style="min-width:0"><div class="sl">${esc(c.label)} ${c.platform ? `<span class="chip">${esc(c.platform)}</span>` : ''}</div>
-            <div class="sd" style="margin-top:3px">Depositado ${money(b.deposit, c.currency)}${b.interest > 0 ? ` · <span style="color:var(--up)">Juros ${money(b.interest, c.currency)}</span>` : ''}</div></div>
+          <div class="cashtop"><div style="min-width:0"><div class="sl">${esc(c.label)} ${c.platform ? `<span class="chip">${esc(c.platform)}</span>` : ''}${c.broker ? ' <span class="chip">por investir</span>' : ''}</div>
+            <div class="sd" style="margin-top:3px">${breakdown(b, c.currency)}</div></div>
             <div class="cashbal mono">${money(cashBal(c), c.currency)}</div></div>
-          ${ents.length > 1 ? `<div class="cashents"${open.has(c.id) ? '' : ' hidden'}>${ents.map((e, i) => `<div class="lot"><span>${e.kind === 'interest' ? '💰 Juros' : e.amount < 0 ? 'Levantamento' : 'Depósito'}${e.date ? ` · ${esc(e.date)}` : ''}</span><span class="lc">${money(e.amount, c.currency)} <button type="button" class="x mini" data-dele="${id}:${i}" aria-label="Apagar movimento">✕</button></span></div>`).join('')}</div>` : ''}
+          ${ents.length > 1 ? `<div class="cashents"${open.has(c.id) ? '' : ' hidden'}>${ents.map((e, i) => `<div class="lot"><span>${entryLabel(e)}${e.date ? ` · ${esc(e.date)}` : ''}</span><span class="lc">${money(e.amount, c.currency)} <button type="button" class="x mini" data-dele="${id}:${i}" aria-label="Apagar movimento">✕</button></span></div>`).join('')}</div>` : ''}
           <div class="cashbtns">
             <button type="button" class="btn ghost cbtn" data-add="${id}">＋ Movimento</button>
             ${ents.length > 1 ? `<button type="button" class="btn ghost cbtn" data-entst="${id}">${ents.length} movimentos ${open.has(c.id) ? '▴' : '▾'}</button>` : ''}

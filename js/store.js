@@ -4,7 +4,7 @@ import { resolveStock } from './stocks.js';
 export const defaultSettings = () => ({
   displayCurrency: 'EUR', fxManual: null, apiKey: '', refreshMin: 5, fxFeePct: 0.5,
   proxyUrl: '', bgStyle: 'aurora', accent: 'gold',
-  createdAt: null, lastBackup: null, backupSnoozeUntil: 0,
+  createdAt: null, lastBackup: null, backupSnoozeUntil: 0, cashDest: {},
 });
 
 export const defaultCache = () => ({
@@ -102,13 +102,21 @@ function normalizeDividend(x) {
   };
 }
 
+const CASH_KINDS = ['deposit', 'interest', 'sale', 'buy'];
+
 function normalizeCash(c) {
   const entries = Array.isArray(c.entries)
     ? c.entries
     : (n(c.amount) > 0 ? [{ amount: n(c.amount), kind: 'deposit', date: c.date || '' }] : []);
   const out = { ...c };
   delete out.amount; delete out.date;
-  return { ...out, entries: entries.map(e => ({ amount: n(e.amount), kind: e.kind === 'interest' ? 'interest' : 'deposit', date: e.date || '' })) };
+  return {
+    ...out,
+    entries: entries.map(e => ({
+      amount: n(e.amount), kind: CASH_KINDS.includes(e.kind) ? e.kind : 'deposit', date: e.date || '',
+      ...(typeof e.ref === 'string' && e.ref ? { ref: e.ref } : {}),
+    })),
+  };
 }
 
 /**

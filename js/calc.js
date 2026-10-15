@@ -80,10 +80,11 @@ export function closedM(p, cur = disp()) {
 
 export const cashEntries = c => c.entries ?? [];
 export const cashBal = c => cashEntries(c).reduce((s, e) => s + e.amount, 0);
+/** Saldo por origem: depósitos/levantamentos, juros, vendas que entraram e compras pagas com o saldo. */
 export function cashBreak(c) {
-  let deposit = 0, interest = 0;
-  for (const e of cashEntries(c)) e.kind === 'interest' ? (interest += e.amount) : (deposit += e.amount);
-  return { deposit, interest };
+  const out = { deposit: 0, interest: 0, sale: 0, buy: 0 };
+  for (const e of cashEntries(c)) out[e.kind in out ? e.kind : 'deposit'] += e.amount;
+  return out;
 }
 
 export function agg(cur = disp()) {
