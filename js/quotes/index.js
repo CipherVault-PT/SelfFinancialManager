@@ -4,7 +4,8 @@ import { recordHistory } from '../history.js';
 import { checkAlerts } from '../alerts.js';
 import { fetchCryptoPrices } from './crypto.js';
 import { fetchStockQuotes } from './stocks.js';
-import { ensureBenchmark } from '../performance.js';
+import { ensureBenchmark, firstBuyDate } from '../performance.js';
+import { ensureInflation } from '../inflation.js';
 
 /** Estado das últimas atualizações (não é guardado). */
 export const net = { busy: 0, manual: false, fx: null, crypto: null, stocks: null };
@@ -18,7 +19,10 @@ export async function refresh({ crypto = true, stocks = true, force = false } = 
   if (force) net.manual = true;
   try {
     net.fx = await fetchFx({ force });
-    if (stocks) ensureBenchmark().then(changed => changed && commit());
+    if (stocks) {
+      ensureBenchmark().then(changed => changed && commit());
+      ensureInflation(firstBuyDate()).then(changed => changed && commit());
+    }
     const [c, s] = await Promise.all([
       crypto ? fetchCryptoPrices({ force }) : null,
       stocks ? fetchStockQuotes({ force }) : null,
