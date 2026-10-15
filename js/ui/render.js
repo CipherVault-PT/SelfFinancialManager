@@ -53,10 +53,11 @@ function renderTiles(a) {
     ['Investido (aberto)', money(a.inv, d), plural(state.positions.length, 'posição', 'posições'), ''],
     ['Valor atual', money(a.val, d), signed(a.unreal, money(a.unreal, d)), upDown(a.unreal)],
     ['Realizado (sempre)', money(a.realized, d), plural(a.closedN, 'fechada', 'fechadas'), a.closedN ? upDown(a.realized) : ''],
-    ['Fundo / Cash', money(a.cashV, d), state.cash.length ? plural(state.cash.length, 'conta', 'contas') : '—', ''],
+    ['Fundo / Cash', money(a.cashV, d), state.cash.length ? `${plural(state.cash.length, 'conta', 'contas')} ›` : 'adicionar ›', '', 'cash'],
   ];
-  $('#tiles').innerHTML = tiles.map(([k, v, s, c]) =>
-    `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s ${c}">${s}</div></div>`).join('');
+  $('#tiles').innerHTML = tiles.map(([k, v, s, c, action]) => action
+    ? `<button type="button" class="tile tile-btn" data-action="${action}"><div class="k">${k}</div><div class="v">${v}</div><div class="s ${c}">${s}</div></button>`
+    : `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s ${c}">${s}</div></div>`).join('');
 }
 
 function renderCounts() {
@@ -160,7 +161,7 @@ function viewPositions() {
   if (!state.positions.length) {
     return empty('Ainda sem posições', 'Regista a tua primeira entrada. A app calcula as unidades, o lucro ao vivo e a percentagem — tudo por ti.', 'Adicionar posição', 'add', IMPORT_ALT);
   }
-  return `<div class="sh"><h3>Posições abertas</h3><div class="sh-r"><button class="btn ghost" data-action="import" title="Importar extrato da corretora">📄 Extrato</button><button class="btn ghost" data-action="cash">＋ Fundo / Cash</button></div></div>
+  return `<div class="sh"><h3>Posições abertas</h3><div class="sh-r"><button class="btn ghost" data-action="import" title="Importar extrato da corretora">📄 Extrato</button><button class="btn ghost" data-action="cash">💶 Fundo / Cash</button></div></div>
     <div class="plist">${state.positions.map(positionCard).join('')}</div>`;
 }
 

@@ -1,3 +1,4 @@
+import { PLATFORMS } from './config.js';
 import { state, uid } from './store.js';
 import { conv } from './fx.js';
 import { cashBal } from './calc.js';
@@ -11,6 +12,9 @@ export const BROKER = 'broker';
 export const OUT = 'out';
 
 export const brokerLabel = platform => `Saldo ${platform || 'por investir'}`;
+
+/** Nome de uma conta nas listas de escolha. */
+export const accountLabel = c => (c.broker ? `Saldo por investir · ${c.platform}` : `${c.label}${c.platform ? ` · ${c.platform}` : ''}`);
 
 /** Conta "saldo por investir" da corretora (criada só quando é precisa). */
 export function brokerAccount(platform, currency, create = false) {
@@ -48,7 +52,7 @@ export function buySources(platform, currency) {
   const opts = [{ v: 'new', label: 'Dinheiro novo (depositado agora)' }];
   for (const c of state.cash) {
     const bal = cashBal(c);
-    if (bal > 0.005) opts.push({ v: `cash:${c.id}`, label: c.broker ? `Saldo por investir · ${c.platform}` : `${c.label}${c.platform ? ` · ${c.platform}` : ''}`, bal, cur: c.currency });
+    if (bal > 0.005) opts.push({ v: `cash:${c.id}`, label: accountLabel(c), bal, cur: c.currency });
   }
   const broker = brokerAccount(platform, currency);
   return { opts, pick: broker && cashBal(broker) > 0.005 ? `cash:${broker.id}` : 'new' };
@@ -107,4 +111,40 @@ export function dropCashRefs(ref) {
 export function saleCashLabel(saleId) {
   const c = state.cash.find(x => x.entries.some(e => e.ref === `sale:${saleId}`));
   return c ? c.label : null;
+}
+
+/* ---------- transferências entre contas ---------- */
+
+/** Para onde se pode transferir: as outras contas e o saldo por investir das corretoras que ainda não o têm. */
+export function transferTargets(fromId) {
+  const from = state.cash.find(c => c.id === fromId);
+  const opts = state.cash.filter(c => c.id !== fromId).map(c => ({ v: `cash:${c.id}`, label: accountLabel(c), bal: cashBal(c), cur: c.currency }));
+  for (const p of PLATFORMS) {
+    if (!state.cash.some(c => c.broker && c.platform === p)) opts.push({ v: `broker:${p}`, label: `Saldo por investir · ${p} (novo)`, bal: 0, cur: from?.currency ?? 'EUR' });
+  }
+  return opts;
+}
+
+/**
+ * Passa dinheiro de uma conta para outra (ex: saldo da Revolut → fundo de emergência ou → XTB para investir).
+ * `received` é o valor que chega, quando as moedas são diferentes (por omissão, ao câmbio do dia).
+ */
+export function transferCash({ from, to, amount, received = null, date }) {
+  const src = state.cash.find(c => c.id === from);
+  if (!src) throw new Error('Escolhe a conta de origem');
+  if (!(amount > 0)) throw new Error('Indica o valor');
+  if (amount > cashBal(src) + 0.005) throw new Error(`O saldo só tem ${Math.max(0, cashBal(src)).toFixed(2).replace('.', ',')}`);
+  const dst = to?.startsWith('broker:') ? brokerAccount(to.slice(7), src.currency, true)
+    : state.cash.find(c => `cash:${c.id}` === to);
+  if (!dst || dst === src) throw new Error('Escolhe a conta de destino');
+  const got = received > 0 ? received : conv(amount, src.currency, dst.currency);
+  const ref = `tr:${uid()}`;
+  src.entries.push({ amount: -amount, kind: 'transfer', date, ref });
+  dst.entries.push({ amount: got, kind: 'transfer', date, ref });
+  return { src, dst, got, ref };
+}
+
+/** A outra conta de uma transferência (para mostrar "→ Fundo de emergência" / "← Saldo Revolut"). */
+export function transferPeer(ref, selfId) {
+  return state.cash.find(c => c.id !== selfId && c.entries.some(e => e.ref === ref)) ?? null;
 }
