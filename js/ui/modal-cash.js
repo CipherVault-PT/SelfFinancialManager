@@ -8,7 +8,7 @@ import { $, $$, toast, openModal, segmented, modalEl } from './dom.js';
 
 const opts = list => list.map(x => `<option>${esc(x)}</option>`).join('');
 
-const ENTRY = { interest: '💰 Juros', sale: '↩ Venda', buy: '↗ Compra' };
+const ENTRY = { interest: '💰 Juros', sale: '↩ Venda', buy: '↗ Compra', dividend: '💵 Dividendo' };
 
 function entryLabel(e, c) {
   if (e.kind === 'transfer') {
@@ -20,9 +20,10 @@ function entryLabel(e, c) {
 
 function breakdown(b, cur) {
   return [
-    (b.deposit || (!b.sale && !b.buy && !b.transfer)) && `Depositado ${money(b.deposit, cur)}`,
+    (b.deposit || (!b.sale && !b.buy && !b.transfer && !b.dividend)) && `Depositado ${money(b.deposit, cur)}`,
     b.interest > 0 && `<span style="color:var(--up)">Juros ${money(b.interest, cur)}</span>`,
     b.sale > 0 && `De vendas ${money(b.sale, cur)}`,
+    b.dividend > 0 && `Dividendos ${money(b.dividend, cur)}`,
     b.buy < 0 && `Usado em compras ${money(-b.buy, cur)}`,
     Math.abs(b.transfer) > 0.005 && `Transferências ${b.transfer > 0 ? '+' : ''}${money(b.transfer, cur)}`,
   ].filter(Boolean).join(' · ');

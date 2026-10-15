@@ -8,7 +8,7 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 
 - **Cripto ao vivo**: CoinGecko, com a Binance como reserva quando a CoinGecko limita pedidos.
 - **Ações e ETFs ao vivo**: Yahoo Finance, através do teu atalho Cloudflare ou de intermediários públicos, com a Twelve Data como reserva opcional. Inclui:
-  - pesquisa nas ~650 ações/ETFs da base local;
+  - pesquisa nas ~1800 ações/ETFs da base local: S&P 500, S&P 600, Nasdaq-100, as principais bolsas europeias (DAX/MDAX/SDAX/TecDAX, CAC 40, FTSE 100, IBEX 35, FTSE MIB, AEX, BEL 20, SMI, nórdicas, Áustria, Irlanda, PSI) e ADRs/ações populares, todas com setor e país;
   - pesquisa global no Yahoo, para qualquer ticker do mundo;
   - preço pré-preenchido ao escolher a ação.
 - **Câmbio do BCE** (Frankfurter) para EUR, USD, GBP, CHF, DKK e outras.
@@ -20,9 +20,9 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Para onde vai o dinheiro**: ao vender escolhes o destino — fica na corretora (saldo por investir, criado automaticamente), vai para um fundo (ex: fundo de emergência na Trade Republic) ou sai da app. Ao comprar ou reforçar podes pagar com esses saldos, para o património não contar o mesmo dinheiro duas vezes. A app lembra a última escolha de cada corretora; anular uma venda ou apagar uma posição desfaz os movimentos.
 - **Transferir dinheiro entre contas**: do saldo de uma corretora para o fundo de emergência ou para outra corretora para investir (ex: fechas cripto na Revolut e passas o dinheiro para a XTB). Converte moedas (podes indicar o valor exato que chegou), cria o saldo da corretora de destino se ainda não existir e apagar uma transferência desfaz os dois lados.
 - **Proteção dos dados**: pedido de armazenamento persistente ao browser, lembrete de backup (primeiro aos 3 dias, depois a cada 30), backup pela folha de partilha do telemóvel (Drive, email…) e **repor os dados** de antes de importar ou apagar tudo.
-- **Dividendos**: valor bruto, imposto retido na fonte e moeda, por ação (aberta ou já vendida); total e **retorno total** em cada posição, lista no Histórico e resumo dos últimos 12 meses no Painel.
+- **Dividendos**: valor bruto, imposto retido na fonte e moeda, por ação (aberta ou já vendida), e para onde foi o dinheiro (saldo da corretora, um fundo ou fora da app); total e **retorno total** em cada posição, lista no Histórico e resumo dos últimos 12 meses no Painel.
 - **Relatório para o IRS**, por ano — mais-valias: uma linha por cada compra vendida (FIFO), valores em € (câmbio do BCE da data para contas noutra moeda), dias detido, totais de ações/ETFs e cripto (< 365 dias tributada; ≥ 365 dias excluída), imposto estimado à taxa de 28%; dividendos em € com o imposto retido no estrangeiro e o imposto adicional estimado; exportação CSV para Excel. É uma ajuda — não substitui o guia da corretora nem um contabilista.
-- **Distribuição por setor, país e moeda** no Painel, com aviso de concentração (≥ 40% num setor, país ou fora do euro). As ~650 ações da base já vêm classificadas; as restantes ganham o país pela bolsa e podes completar ou corrigir o setor e o país à mão.
+- **Distribuição por setor, país e moeda** no Painel, com aviso de concentração (≥ 40% num setor, país ou fora do euro). As ~1800 ações da base já vêm classificadas; as restantes ganham o país pela bolsa e podes completar ou corrigir o setor e o país à mão.
 - **Rentabilidade real** no Painel: ganho total (inclui vendas e dividendos), rentabilidade **por ano (TIR)** que conta com o dia de cada compra e venda, e comparação com o **S&P 500** — o mesmo dinheiro, nas mesmas datas, num ETF em euros (SXR8.DE). Antes de 1 ano mostra a rentabilidade do período (anualizar poucos meses engana).
 - **Importar o extrato da XTB** (Excel exportado da xStation): cria as posições abertas e as vendas com a data e o custo de cada compra (prontas para o relatório do IRS) e os dividendos com o imposto retido. Pré-visualização antes de aplicar, não duplica ao importar de novo, pode substituir o que registaste à mão e dá para desfazer. CFDs ficam de fora. O ficheiro é lido só no dispositivo (leitor de .xlsx próprio, sem bibliotecas externas).
 - **Bloqueio com PIN** (4 a 8 algarismos, guardado só como hash PBKDF2) e, onde o dispositivo o permite, **impressão digital / Face ID** (WebAuthn). Bloqueia ao abrir e ao voltar à app (logo, 1, 5 ou 15 min), espera progressiva depois de 5 erros e "Esqueci-me do PIN" (apaga os dados do dispositivo; depois repões um backup). É uma proteção contra quem pegue no telemóvel — não cifra os dados.
@@ -83,6 +83,7 @@ js/
   net.js                pedidos com timeout e concorrência limitada
   stocks.js             pesquisa e símbolos da base de ações
   data/stocks.js        base local de ações e ETFs (símbolo Yahoo único)
+  data/stocks-world.js  restantes ações dos EUA e da Europa (gerado a partir das listas dos índices)
   data/classification.js setores, países e classificação das ações europeias e temáticas
   quotes/               cotações: crypto.js, stocks.js e index.js (orquestração)
   ui/                   render, modais, formulário de entradas, tema, fundo animado

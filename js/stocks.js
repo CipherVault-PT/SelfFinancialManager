@@ -1,6 +1,9 @@
-import { STOCKS } from './data/stocks.js';
+import { STOCKS as BASE } from './data/stocks.js';
+import { WORLD } from './data/stocks-world.js';
 
-export { STOCKS };
+/** Base local completa: a principal (com ETFs e temáticas) e as restantes ações dos EUA e da Europa. */
+const seen = new Set(BASE.map(s => s.y));
+export const STOCKS = [...BASE, ...WORLD.filter(s => !seen.has(s.y))];
 
 const BY_QUOTE = new Map(STOCKS.map(s => [s.y, s]));
 
@@ -8,6 +11,7 @@ const BY_QUOTE = new Map(STOCKS.map(s => [s.y, s]));
 const SUFFIX_MIC = {
   '.LS': 'XLIS', '.DE': 'XETR', '.PA': 'XPAR', '.AS': 'XAMS', '.MC': 'XMAD', '.MI': 'XMIL',
   '.L': 'XLON', '.SW': 'XSWX', '.CO': 'XCSE', '.IR': 'XMSM', '.ST': 'XSTO', '.HE': 'XHEL',
+  '.BR': 'XBRU', '.OL': 'XOSL', '.VI': 'XWBO',
 };
 
 export const byQuote = y => BY_QUOTE.get(y) ?? null;

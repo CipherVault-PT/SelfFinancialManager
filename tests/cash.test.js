@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state, hydrate } from '../js/store.js';
 import { cashBal, cashBreak, agg } from '../js/calc.js';
-import { BROKER, OUT, saleDestinations, buySources, creditSale, debitBuy, dropCashRefs, saleCashLabel, brokerAccount, transferTargets, transferCash, transferPeer } from '../js/cash.js';
+import { addDividend, removeDividend } from '../js/dividends.js';
+import { creditCash, BROKER, OUT, saleDestinations, buySources, creditSale, debitBuy, dropCashRefs, saleCashLabel, brokerAccount, transferTargets, transferCash, transferPeer } from '../js/cash.js';
 import { reset } from './helpers.js';
 
 const fund = (id, platform, amount, currency = 'EUR') =>
@@ -51,7 +52,7 @@ test('compra: usa o saldo da corretora se houver, até ao que existe', () => {
   assert.equal(cashBal(broker), 0);
   assert.equal(debitBuy('new', { amount: 100, currency: 'EUR', platform: 'XTB', date: '2025-05-08', posId: 'p3' }), 0);
   assert.equal(buySources('XTB', 'EUR').opts.length, 1, 'saldos a zero não aparecem');
-  assert.deepEqual(cashBreak(broker), { deposit: 0, interest: 0, sale: 300, buy: -300, transfer: 0 });
+  assert.deepEqual(cashBreak(broker), { deposit: 0, interest: 0, sale: 300, buy: -300, transfer: 0, dividend: 0 });
 });
 
 test('anular venda / apagar posição desfaz os movimentos; saldo da corretora vazio desaparece', () => {
@@ -96,7 +97,7 @@ test('transferir: do saldo da Revolut para o fundo de emergência e para investi
   assert.equal(t2.dst.label, 'Saldo XTB');
   assert.equal(cashBal(rev), 0);
   assert.equal(buySources('XTB', 'EUR').pick, `cash:${t2.dst.id}`, 'o dinheiro transferido fica pronto a investir');
-  assert.deepEqual(cashBreak(rev), { deposit: 0, interest: 0, sale: 1500, buy: 0, transfer: -1500 });
+  assert.deepEqual(cashBreak(rev), { deposit: 0, interest: 0, sale: 1500, buy: 0, transfer: -1500, dividend: 0 });
   assert.equal(agg('EUR').cashV, 3500, 'transferir não muda o património');
 });
 
@@ -114,6 +115,20 @@ test('transferir: valida saldo e destino, converte moedas e desfaz os dois lados
   assert.equal(dropCashRefs(t.ref), 2);
   assert.equal(cashBal(state.cash[0]), 80);
   assert.equal(cashBal(state.cash[1]), 0, 'o que já tinha sido gasto passa a dinheiro novo');
+});
+
+test('dividendos: entram no saldo escolhido (na moeda da conta) e saem se forem apagados', () => {
+  reset();
+  const asset = { id: 'p1', name: 'Apple', symbol: 'AAPL', platform: 'XTB', currency: 'EUR' };
+  const d = addDividend(asset, { date: '2025-08-14', gross: 12.5, withheld: 1.875, currency: 'USD' });
+  const c = creditCash(BROKER, { amount: 10.625, currency: 'USD', accountCurrency: 'EUR', platform: 'XTB', date: d.date, ref: `div:${d.id}`, kind: 'dividend' });
+  assert.equal(c.label, 'Saldo XTB');
+  assert.equal(c.currency, 'EUR');
+  assert.equal(cashBal(c), 8.5, '10,625 USD a 1,25 = 8,50 EUR');
+  assert.equal(cashBreak(c).dividend, 8.5);
+  removeDividend(d.id);
+  assert.equal(state.dividends.length, 0);
+  assert.equal(brokerAccount('XTB', 'EUR'), null, 'o saldo criado só para o dividendo desaparece');
 });
 
 test('dados guardados: tipos de movimento e ligações sobrevivem; tipos desconhecidos viram depósito', () => {
