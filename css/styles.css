@@ -492,3 +492,7 @@ button.lnk{background:none;border:0;padding:0;font:inherit;float:none;color:var(
 body.locked{overflow:hidden}
 .pin-inp{letter-spacing:.4em;text-align:center}
 @media (prefers-reduced-motion:reduce){.lock,.lock-dots.shake{animation:none}}
+
+/* --- v2.8: transferências --- */
+.tile-btn{display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;transition:border-color .15s}
+.tile-btn:hover,.tile-btn:focus-visible{border-color:var(--brass)}
