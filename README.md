@@ -19,7 +19,7 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - Histórico de vendas com lucro realizado; fundos/cash com depósitos, juros e levantamentos.
 - **Para onde vai o dinheiro**: ao vender escolhes o destino — fica na corretora (saldo por investir, criado automaticamente), vai para um fundo (ex: fundo de emergência na Trade Republic) ou sai da app. Ao comprar ou reforçar podes pagar com esses saldos, para o património não contar o mesmo dinheiro duas vezes. A app lembra a última escolha de cada corretora; anular uma venda ou apagar uma posição desfaz os movimentos.
 - **Transferir dinheiro entre contas**: do saldo de uma corretora para o fundo de emergência ou para outra corretora para investir (ex: fechas cripto na Revolut e passas o dinheiro para a XTB). Converte moedas (podes indicar o valor exato que chegou), cria o saldo da corretora de destino se ainda não existir e apagar uma transferência desfaz os dois lados.
-- **Proteção dos dados**: pedido de armazenamento persistente ao browser, lembrete de backup (primeiro aos 3 dias, depois a cada 30), backup pela folha de partilha do telemóvel (Drive, email…) e **repor os dados** de antes de importar ou apagar tudo.
+- **Proteção dos dados**: pedido de armazenamento persistente ao browser, lembrete de backup (primeiro aos 3 dias, depois a cada 30), backup pela folha de partilha do telemóvel (Drive, email…), **cifrado com palavra-passe** por omissão (AES-256-GCM; com a sincronização ligada usa a frase-passe dela e repõe sem perguntar) e **repor os dados** de antes de importar ou apagar tudo.
 - **Dividendos**: valor bruto, imposto retido na fonte e moeda, por ação (aberta ou já vendida), e para onde foi o dinheiro (saldo da corretora, um fundo ou fora da app); total e **retorno total** em cada posição, lista no Histórico e resumo dos últimos 12 meses no Painel.
 - **Relatório para o IRS**, por ano — mais-valias: uma linha por cada compra vendida (FIFO), valores em € (câmbio do BCE da data para contas noutra moeda), dias detido, totais de ações/ETFs e cripto (< 365 dias tributada; ≥ 365 dias excluída), imposto estimado à taxa de 28%; dividendos em € com o imposto retido no estrangeiro e o imposto adicional estimado; exportação CSV para Excel. É uma ajuda — não substitui o guia da corretora nem um contabilista.
 - **Distribuição por setor, país e moeda** no Painel, com aviso de concentração (≥ 40% num setor, país ou fora do euro). As ~1800 ações da base já vêm classificadas; as restantes ganham o país pela bolsa e podes completar ou corrigir o setor e o país à mão.
@@ -65,7 +65,7 @@ js/
   main.js               arranque, eventos e atualizações automáticas
   config.js             constantes (corretoras, moedas, cores, intervalos)
   store.js              estado, gravação, migração de dados antigos, importar/exportar, desfazer
-  backup.js             lembrete de backup, armazenamento persistente, guardar ficheiro
+  backup.js             lembrete de backup, cifra do backup, armazenamento persistente, guardar ficheiro
   lock.js               bloqueio: PIN (PBKDF2), tentativas, impressão digital/Face ID (WebAuthn)
   format.js             formatação de valores, datas e números
   fx.js                 câmbio e conversões
@@ -105,4 +105,4 @@ Ideias faladas mas ainda por fazer (ou postas de parte) estão em [`IDEIAS.md`](
 npm test
 ```
 
-Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, o destino do dinheiro das vendas e compras, as transferências, os planos de poupança, as metas, o rebalanceamento, a inflação, a sincronização (dois dispositivos contra o Worker com um cofre simulado), a distribuição (incluindo que todas as ações da base têm setor e país), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
+Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, o destino do dinheiro das vendas e compras, as transferências, os planos de poupança, as metas, o rebalanceamento, a inflação, a sincronização (dois dispositivos contra o Worker com um cofre simulado), a distribuição (incluindo que todas as ações da base têm setor e país), os backups (incluindo os cifrados: palavra errada, ficheiro adulterado), a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
