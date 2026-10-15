@@ -24,8 +24,9 @@ export function autoClass(p) {
   const s = y ? byQuote(y) : null;
   const [ovSector, ovCountry] = (y && OVERRIDES[y]) || [];
   const isEtf = !!s?.x?.startsWith('ETF');
-  const sector = ovSector || (s && BASE_SECTORS.has(s.x) ? s.x : isEtf ? 'ETF (diversificado)' : UNKNOWN);
+  const sector = ovSector || s?.s || (s && BASE_SECTORS.has(s.x) ? s.x : isEtf ? 'ETF (diversificado)' : UNKNOWN);
   const country = ovCountry
+    || s?.k
     || (isEtf ? etfRegion(s.x) : null)
     || (s && EXCHANGE_COUNTRY[s.x])
     || (s && BASE_SECTORS.has(s.x) ? 'EUA' : null)

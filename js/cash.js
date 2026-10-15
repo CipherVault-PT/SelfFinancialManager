@@ -58,14 +58,19 @@ export function buySources(platform, currency) {
   return { opts, pick: broker && cashBal(broker) > 0.005 ? `cash:${broker.id}` : 'new' };
 }
 
-/** Credita o valor de uma venda no destino escolhido. Devolve a conta (ou null se saiu da app). */
-export function creditSale(choice, { amount, currency, platform, date, saleId }) {
+/**
+ * Credita dinheiro recebido (venda ou dividendo) no destino escolhido e lembra a escolha da corretora.
+ * Devolve a conta (ou null se o dinheiro saiu da app).
+ */
+export function creditCash(choice, { amount, currency, platform, date, ref, kind = 'sale', accountCurrency = currency }) {
   if (state.settings.cashDest?.[platform] !== choice) state.settings.cashDest = { ...state.settings.cashDest, [platform]: choice };
-  const c = accountOf(choice, platform, currency, true);
+  const c = accountOf(choice, platform, accountCurrency, true);
   if (!c || !(amount > 0)) return null;
-  c.entries.push({ amount: conv(amount, currency, c.currency), kind: 'sale', date, ref: `sale:${saleId}` });
+  c.entries.push({ amount: conv(amount, currency, c.currency), kind, date, ref });
   return c;
 }
+
+export const creditSale = (choice, { saleId, ...o }) => creditCash(choice, { ...o, ref: `sale:${saleId}` });
 
 /**
  * Paga uma compra com o saldo escolhido (até ao que houver). Devolve quanto saiu do saldo,

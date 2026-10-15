@@ -1,6 +1,7 @@
 import { state, uid } from './store.js';
 import { conv, disp } from './fx.js';
 import { todayISO } from './format.js';
+import { dropCashRefs } from './cash.js';
 
 /** Acima desta retenção na fonte, o excedente normalmente não é dedutível em Portugal (convenções). */
 export const HIGH_WITHHOLDING = 0.15;
@@ -23,6 +24,7 @@ export function addDividend(asset, { date, gross, withheld = 0, currency }) {
 
 export function removeDividend(id) {
   state.dividends = state.dividends.filter(d => d.id !== id);
+  dropCashRefs(`div:${id}`);
 }
 
 /** Ações/ETFs que podem ter dividendos: as abertas e as já vendidas (uma entrada por posição). */
