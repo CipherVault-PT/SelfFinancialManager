@@ -40,7 +40,7 @@ function routes(url) {
  * Tenta cada intermediário até obter uma resposta reconhecida por `accept`.
  * Se a resposta for válida mas sem dados (ex: símbolo inexistente), pára logo.
  */
-async function viaProxies(url, accept, parse) {
+export async function viaProxies(url, accept, parse) {
   for (const r of routes(url)) {
     let d;
     try { d = await fetchJSON(r.href, { timeout: r.id === 'custom' ? 9000 : 7000 }); } catch { continue; }

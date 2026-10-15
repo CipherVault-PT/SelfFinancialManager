@@ -26,6 +26,10 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Rentabilidade real** no Painel: ganho total (inclui vendas e dividendos), rentabilidade **por ano (TIR)** que conta com o dia de cada compra e venda, e comparação com o **S&P 500** — o mesmo dinheiro, nas mesmas datas, num ETF em euros (SXR8.DE). Antes de 1 ano mostra a rentabilidade do período (anualizar poucos meses engana).
 - **Importar o extrato da XTB** (Excel exportado da xStation): cria as posições abertas e as vendas com a data e o custo de cada compra (prontas para o relatório do IRS) e os dividendos com o imposto retido. Pré-visualização antes de aplicar, não duplica ao importar de novo, pode substituir o que registaste à mão e dá para desfazer. CFDs ficam de fora. O ficheiro é lido só no dispositivo (leitor de .xlsx próprio, sem bibliotecas externas).
 - **Bloqueio com PIN** (4 a 8 algarismos, guardado só como hash PBKDF2) e, onde o dispositivo o permite, **impressão digital / Face ID** (WebAuthn). Bloqueia ao abrir e ao voltar à app (logo, 1, 5 ou 15 min), espera progressiva depois de 5 erros e "Esqueci-me do PIN" (apaga os dados do dispositivo; depois repões um backup). É uma proteção contra quem pegue no telemóvel — não cifra os dados.
+- **Planos de poupança**: compra mensal de valor fixo numa posição (ex: 100 € de VWCE no dia 2). No dia, o Painel avisa para registar a compra — valor e preço pré-preenchidos, unidades estimadas e editáveis, pagamento com um saldo — ou saltar o mês. A app não compra nada sozinha.
+- **Meta**: objetivo de património, valor por mês e rentabilidade estimada (ou a tua TIR); progresso, data estimada para lá chegares, cenários a ±2% e a regra dos 4%.
+- **Rebalancear**: alocação alvo por ativo (o mesmo ETF em várias corretoras conta junto) e quanto pôr em cada um no próximo investimento para te aproximares do alvo sem vender.
+- **Rentabilidade sem a inflação**: o ganho em poder de compra, descontando a inflação de Portugal (IHPC mensal do BCE).
 - **Alertas de preço** com notificações.
 - **Gráfico da evolução do património** (1M / 3M / 1A / Tudo).
 - Funciona offline com os últimos dados (service worker).
@@ -69,6 +73,10 @@ js/
   dividends.js          dividendos (registo, totais por posição, estatísticas)
   allocation.js         distribuição por setor, país e moeda; concentração
   performance.js        rentabilidade: TIR (XIRR) e comparação com o S&P 500
+  inflation.js          inflação de Portugal (IHPC do BCE) e rentabilidade real
+  plans.js              planos de poupança mensais
+  goals.js              metas: projeção com juros compostos, regra dos 4%
+  rebalance.js          alocação alvo e sugestão de onde investir
   import/               extratos: xlsx.js (leitor de Excel), xtb.js (formato XTB), apply.js (pré-visualizar e aplicar)
   tax.js                relatório IRS: mais-valias FIFO e dividendos (câmbio histórico, resumo anual, CSV)
   alerts.js             alertas de preço
@@ -89,4 +97,4 @@ tests/                  testes (node --test)
 npm test
 ```
 
-Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, o destino do dinheiro das vendas e compras, a distribuição (incluindo que todas as ações da base têm setor e país), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
+Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, o destino do dinheiro das vendas e compras, as transferências, os planos de poupança, as metas, o rebalanceamento, a inflação, a distribuição (incluindo que todas as ações da base têm setor e país), os backups, a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.

@@ -2,7 +2,7 @@ import { REFRESH, STORAGE_KEY } from './config.js';
 import { state, load, save, subscribe, commit, hasData } from './store.js';
 import { saveBackup, snoozeBackup, requestPersistence } from './backup.js';
 import { refresh, onAlerts, net } from './quotes/index.js';
-import { renderAll, renderStatus, renderView, ui } from './ui/render.js';
+import { renderAll, renderStatus, renderView, rebalanceTable, ui } from './ui/render.js';
 import { $, $$, toast, closeModal, modalOpen } from './ui/dom.js';
 import { applyAccent } from './ui/theme.js';
 import { initBackground } from './ui/background.js';
@@ -15,8 +15,10 @@ import { modalDividend } from './ui/modal-dividend.js';
 import { removeDividend } from './dividends.js';
 import { modalClassify } from './ui/modal-classify.js';
 import { modalImport } from './ui/modal-import.js';
+import { modalPlan, modalPlanRun, skipPlan, modalGoal, modalTargets } from './ui/modal-planning.js';
 import { initPWA } from './pwa.js';
 import { initLock } from './ui/lock-screen.js';
+import { num } from './format.js';
 
 load();
 state.settings.accent = applyAccent(state.settings.accent);
@@ -68,6 +70,11 @@ const ACTIONS = {
   price: modalStockPrice,
   delete: deletePosition,
   'undo-sale': undoSale,
+  plan: modalPlan,
+  'plan-run': modalPlanRun,
+  'plan-skip': skipPlan,
+  goal: () => modalGoal(),
+  targets: () => modalTargets(),
   tax: modalTax,
   dividend: modalDividend,
   'dividend-del': id => {
@@ -102,6 +109,12 @@ document.addEventListener('click', e => {
 });
 
 for (const b of $$('.tabs button')) b.addEventListener('click', () => switchTab(b.dataset.tab));
+
+$('#view').addEventListener('input', e => {
+  if (e.target.id !== 'rbAmt') return;
+  ui.rbAmount = Math.max(0, num(e.target.value) || 0);
+  $('#rbRows').innerHTML = rebalanceTable();
+});
 
 $('#curSeg').addEventListener('click', e => {
   const b = e.target.closest('button[data-cur]');

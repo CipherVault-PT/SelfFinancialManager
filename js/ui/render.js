@@ -10,6 +10,10 @@ import { performance, benchmarkCompare, benchSeries, benchState, BENCHMARK, MIN_
 import { net } from '../quotes/index.js';
 import { backupDue, daysSinceBackup } from '../backup.js';
 import { saleCashLabel } from '../cash.js';
+import { hicpSeries, inflationSince, realRate } from '../inflation.js';
+import { plansDue, validPlan, plansMonthly } from '../plans.js';
+import { monthsToGoal, addMonths, fourPercentMonthly, DEFAULT_RATE } from '../goals.js';
+import { holdings, suggest } from '../rebalance.js';
 import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } from '../format.js';
 import { $, $$ } from './dom.js';
 
@@ -17,7 +21,7 @@ const CLR = { crypto: 'var(--brass)', stock: 'var(--indigo)', cash: 'var(--slate
 const platClass = p => PLATFORM_CLASS[p] ?? '';
 const upDown = v => (v >= 0 ? 'up' : 'down');
 
-export const ui = { tab: 'painel', chartDays: 90, expanded: new Set(), allocDim: 'sector' };
+export const ui = { tab: 'painel', chartDays: 90, expanded: new Set(), allocDim: 'sector', rbAmount: null };
 
 export function renderAll() {
   const a = agg();
@@ -127,7 +131,7 @@ function positionCard(p) {
       <div class="tkn">${icon}</div>
       <div style="min-width:0">
         <div class="nm">${esc(p.name)} <span class="chip ${platClass(p.platform)}">${esc(p.platform)}</span></div>
-        <div class="sub">${units(m.u)} ${esc(p.symbol || '')} · conta ${esc(sym(p.currency))}${m.nativeCur !== p.currency ? ` · cota ${esc(m.nativeCur)}` : ''} ${liveTag(p, m)}</div>
+        <div class="sub">${units(m.u)} ${esc(p.symbol || '')} · conta ${esc(sym(p.currency))}${m.nativeCur !== p.currency ? ` · cota ${esc(m.nativeCur)}` : ''} ${liveTag(p, m)}${validPlan(p.plan) ? ` <span class="plantag">🔁 ${money(p.plan.amount, p.currency)}/mês · dia ${p.plan.day}</span>` : ''}</div>
       </div>
       <div class="pos-r">
         <div class="pl ${plc}">${signed(m.plPos, money(m.plPos, p.currency))}</div>
@@ -149,6 +153,7 @@ function positionCard(p) {
         <button class="btn" data-action="close" data-id="${id}">Vender</button>
       </div>
       <div class="acts-ic">
+      <button class="btn xic ${validPlan(p.plan) ? 'on' : ''}" data-action="plan" data-id="${id}" title="Plano mensal" aria-label="Plano de poupança mensal">🔁</button>
       ${isStock ? `<button class="btn xic ${divNet ? 'on' : ''}" data-action="dividend" data-id="${id}" title="Dividendos" aria-label="Dividendos">💰</button>` : ''}
       <button class="btn xic ${hasAlert ? 'on' : ''}" data-action="alert" data-id="${id}" title="Alerta de preço" aria-label="Alertas de preço">🔔</button>
       <button class="btn xic" data-action="delete" data-id="${id}" title="Apagar (corrigir erro)" aria-label="Apagar posição">🗑</button>
@@ -161,7 +166,7 @@ function viewPositions() {
   if (!state.positions.length) {
     return empty('Ainda sem posições', 'Regista a tua primeira entrada. A app calcula as unidades, o lucro ao vivo e a percentagem — tudo por ti.', 'Adicionar posição', 'add', IMPORT_ALT);
   }
-  return `<div class="sh"><h3>Posições abertas</h3><div class="sh-r"><button class="btn ghost" data-action="import" title="Importar extrato da corretora">📄 Extrato</button><button class="btn ghost" data-action="cash">💶 Fundo / Cash</button></div></div>
+  return `${plansBanner()}<div class="sh"><h3>Posições abertas</h3><div class="sh-r"><button class="btn ghost" data-action="import" title="Importar extrato da corretora">📄 Extrato</button><button class="btn ghost" data-action="cash">💶 Fundo / Cash</button></div></div>
     <div class="plist">${state.positions.map(positionCard).join('')}</div>`;
 }
 
@@ -228,10 +233,10 @@ function viewDashboard(a) {
     ${divTile(d)}
   </div>`;
 
-  return `${backupBanner()}${historyChart()}${performanceSection(d)}${stats}<div class="two">
+  return `${backupBanner()}${plansBanner()}${historyChart()}${performanceSection(d)}${goalSection(a, d)}${stats}<div class="two">
     <div><div class="sh"><h3>Por plataforma</h3><span class="hint">valor atual</span></div><div class="bd">${platRows}</div></div>
     <div><div class="sh"><h3>Por ativo</h3><span class="hint">peso · rendimento</span></div><div class="bd">${assetRows}</div></div>
-  </div>${allocationSection(d)}`;
+  </div>${allocationSection(d)}${rebalanceSection(d)}`;
 }
 
 const ALLOC_DIMS = [['sector', 'Setor'], ['country', 'País'], ['currency', 'Moeda']];
@@ -278,22 +283,93 @@ function performanceSection(d) {
   const bench = benchmarkCompare(pf.flows, benchSeries());
   const diff = pf.rate != null && bench?.rate != null ? (pf.rate - bench.rate) * 100 : null;
   const bs = benchState();
+  const infl = inflationSince(hicpSeries(), pf.start);
+  const real = realRate(pf.rate, pf.days, infl);
+  const inflRate = infl ? (annualised ? infl.annual : infl.period) : null;
   const tile = (k, v, s, cls = '') => `<div class="tile"><div class="k">${k}</div><div class="v ${cls}" style="font-size:19px">${v}</div><div class="s">${s}</div></div>`;
   const benchTile = bench
     ? tile(`${BENCHMARK.name} · mesmas datas`, ratePct(bench.rate), `valeria ${money(toD(bench.value), d)}`, bench.rate != null ? upDown(bench.rate) : '')
     : tile(`${BENCHMARK.name} · mesmas datas`, '—', bs === 'fail' ? 'sem ligação ao Yahoo' : 'a carregar…');
   const notes = [
     pf.missingDates && `<span class="warn">${plural(pf.missingDates, 'entrada sem data', 'entradas sem data')} — conta${pf.missingDates === 1 ? '' : 'm'} a partir de quando começaste a usar a app.</span>`,
-    `Conta com o dia de cada compra, venda e dividendo; ${annualised ? 'a taxa anual é a TIR (como num depósito a prazo)' : 'só anualiza a partir de 1 ano'}. A comparação investe o mesmo dinheiro, nos mesmos dias, num ETF do ${BENCHMARK.name} em euros (${BENCHMARK.y}). Fundos/cash não contam.`,
+    `Conta com o dia de cada compra, venda e dividendo; ${annualised ? 'a taxa anual é a TIR (como num depósito a prazo)' : 'só anualiza a partir de 1 ano'}. A comparação investe o mesmo dinheiro, nos mesmos dias, num ETF do ${BENCHMARK.name} em euros (${BENCHMARK.y}). "Sem a inflação" é o ganho em poder de compra (inflação de Portugal, IHPC do BCE${infl ? `, até ${esc(monthName(infl.to))}` : ''}). Fundos/cash não contam.`,
   ].filter(Boolean);
   return `<div class="sh"><h3>Rentabilidade</h3><span class="hint">desde ${esc(pf.start)} · ${span(pf.days)}</span></div>
     <div class="stats perf">
       ${tile('Ganho total', signed(pf.gain, money(toD(pf.gain), d)), `${pct(pf.totalPct)} · capital ${money(toD(pf.capital), d)}`, upDown(pf.gain))}
       ${tile(annualised ? 'Por ano' : 'No período', ratePct(pf.rate), pf.rate == null ? `ao fim de ${MIN_DAYS} dias` : 'a tua carteira', pf.rate != null ? upDown(pf.rate) : '')}
+      ${tile('Sem a inflação', ratePct(real), inflRate == null ? (pf.rate == null ? 'poder de compra' : 'a carregar…') : `inflação ${pct(inflRate * 100)}${annualised ? '/ano' : ''}`, real != null ? upDown(real) : '')}
       ${benchTile}
       ${tile('Diferença', diff == null ? '—' : `${diff >= 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} p.p.`, diff == null ? 'face ao índice' : diff >= 0 ? `à frente do ${BENCHMARK.name}` : `atrás do ${BENCHMARK.name}`, diff == null ? '' : upDown(diff))}
     </div>
     <div class="perf-notes">${notes.map(n => `<div>${n}</div>`).join('')}</div>`;
+}
+
+const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const monthName = ym => { const [y, m] = String(ym).split('-'); return `${MONTHS[+m - 1] ?? m} ${y}`; };
+const shortDate = iso => { const [, m, d] = iso.split('-'); return `${+d} ${MONTHS[+m - 1]}`; };
+
+function plansBanner() {
+  const due = plansDue();
+  if (!due.length) return '';
+  return `<div class="plan-due">${due.slice(0, 4).map(({ p, date }) => `
+    <div class="plan-row"><span class="plan-ic" aria-hidden="true">🔁</span>
+      <div class="plan-tx"><b>${esc(p.name)}</b> <span>${money(p.plan.amount, p.currency)} · plano de ${shortDate(date)}</span></div>
+      <button class="btn pri sm" data-action="plan-run" data-id="${esc(p.id)}">Registar</button>
+      <button class="btn ghost sm" data-action="plan-skip" data-id="${esc(p.id)}">Saltar</button></div>`).join('')}
+    ${due.length > 4 ? `<div class="hint">+ ${due.length - 4} por registar</div>` : ''}</div>`;
+}
+
+function goalSection(a, d) {
+  const g = state.settings.goal;
+  if (!g || !(g.target > 0)) {
+    return `<button type="button" class="goal-cta" data-action="goal">🎯 <span><b>Define uma meta</b> — quanto queres juntar e a app diz-te quando lá chegas</span></button>`;
+  }
+  const target = conv(g.target, g.currency || 'EUR', d), monthly = conv(g.monthly || 0, g.currency || 'EUR', d);
+  const rate = g.rate ?? DEFAULT_RATE, now = a.netWorth;
+  const pctDone = Math.min(100, (now / target) * 100);
+  const when = r => monthsToGoal({ now, monthly, rate: r, target });
+  const label = m => (m == null ? 'mais de 70 anos' : m === 0 ? 'já lá estás' : `${monthName(addMonths(m))} (${span(Math.round(m * 30.44))})`);
+  const base = when(rate);
+  const alt = [rate - 2, rate + 2].filter(r => r > 0).map(r => `a ${String(+r.toFixed(1)).replace('.', ',')}%/ano, ${when(r) == null ? 'mais de 70 anos' : monthName(addMonths(when(r)))}`).join(' · ');
+  return `<div class="sh"><h3>Meta</h3><button class="btn ghost sm icon-only" data-action="goal" title="Editar meta" aria-label="Editar meta">✎</button></div>
+    <div class="bd goal">
+      <div class="goal-top"><span><b class="mono">${money(now, d)}</b> de <span class="mono">${money(target, d)}</span></span><b class="goal-pct">${pctDone.toFixed(pctDone < 10 ? 1 : 0).replace('.', ',')}%</b></div>
+      <div class="bt goal-bar"><i style="width:${pctDone}%"></i></div>
+      <div class="goal-proj">${base === 0 ? '🎉 <b>Meta atingida!</b>' : `Com <b>${money(monthly, d)}/mês</b> a <b>${String(rate).replace('.', ',')}%/ano</b> chegas lá em <b>${label(base)}</b>.`}</div>
+      ${base !== 0 && alt ? `<div class="goal-alt">Noutros cenários: ${alt}.</div>` : ''}
+      <div class="goal-alt">Regra dos 4%: ${money(target, d)} dariam ~<b>${money(fourPercentMonthly(target), d)}/mês</b> para sempre (levantando 4% ao ano).</div>
+    </div>`;
+}
+
+function rebalanceRows(d) {
+  const list = holdings(d);
+  const amount = ui.rbAmount ?? (state.settings.goal?.monthly ? conv(state.settings.goal.monthly, state.settings.goal.currency || 'EUR', d) : plansMonthly(d));
+  const { rows, hasTargets } = suggest(list, state.settings.targets, amount);
+  return { rows, hasTargets, amount };
+}
+
+export function rebalanceTable(d = disp()) {
+  const { rows } = rebalanceRows(d);
+  return rows.filter(r => r.target > 0 || r.pct >= 0.5).map(r => `
+    <div class="rb-row"><div class="rb-n" title="${esc(r.name)}">${esc(r.name)}</div>
+      <div class="rb-p mono"><span class="${Math.abs(r.diff) >= 5 ? (r.diff > 0 ? 'down' : 'up') : ''}">${r.pct.toFixed(0)}%</span> <span class="rb-arrow">→</span> ${r.target > 0 ? `${r.target.toFixed(0)}%` : '<span class="muted">—</span>'}</div>
+      <div class="rb-b mono ${r.buy > 0.005 ? 'up' : 'muted'}">${r.buy > 0.005 ? `+${money(r.buy, d)}` : '—'}</div></div>`).join('');
+}
+
+function rebalanceSection(d) {
+  if (!state.positions.length) return '';
+  const { hasTargets, amount } = rebalanceRows(d);
+  if (!hasTargets) {
+    return `<button type="button" class="goal-cta" data-action="targets">⚖️ <span><b>Define a tua alocação alvo</b> — a app diz-te onde pôr o próximo dinheiro para manteres o equilíbrio</span></button>`;
+  }
+  return `<div class="sh"><h3>Rebalancear</h3><button class="btn ghost sm icon-only" data-action="targets" title="Editar alvos" aria-label="Editar alocação alvo">✎</button></div>
+    <div class="bd">
+      <div class="rb-in"><label for="rbAmt">Vou investir</label><input class="inp mono" id="rbAmt" inputmode="decimal" autocomplete="off" value="${amount > 0 ? String(+amount.toFixed(2)).replace('.', ',') : ''}" placeholder="0,00"><span>${esc(sym(d))}</span></div>
+      <div class="rb-head"><span>Ativo</span><span>Atual → alvo</span><span>Comprar</span></div>
+      <div id="rbRows">${rebalanceTable(d)}</div>
+      <div class="alloc-notes"><div>Sem vender nada: o dinheiro novo vai primeiro para o que está abaixo do alvo. Ativos iguais em corretoras diferentes contam juntos.</div></div>
+    </div>`;
 }
 
 function divTile(d) {
