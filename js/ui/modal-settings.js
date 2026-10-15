@@ -1,6 +1,7 @@
 import { ACCENTS, BACKGROUNDS, DEFAULT_RATES } from '../config.js';
 import { state, commit, save, importJSON, wipe, readUndo, restoreUndo } from '../store.js';
-import { saveBackup, daysSinceBackup, isPersisted, requestPersistence } from '../backup.js';
+import { daysSinceBackup, isPersisted, requestPersistence } from '../backup.js';
+import { modalBackup, restoreBackup } from './modal-backup.js';
 import { fxRate, fxFresh } from '../fx.js';
 import { yahooQuote, validProxyUrl } from '../quotes/stocks.js';
 import { refresh } from '../quotes/index.js';
@@ -134,29 +135,30 @@ export function modalSettings() {
     toast(s.refreshMin ? `Ações: a cada ${s.refreshMin} min` : 'Ações: só manual (↻)');
   });
 
-  $('#sExp').onclick = async () => {
-    if (!(await saveBackup())) return;
-    save();
-    modalSettings();
-    toast('Backup guardado');
-  };
+  $('#sExp').onclick = () => modalBackup({
+    back: modalSettings,
+    onSaved: sealed => {
+      save();
+      modalSettings();
+      toast(sealed ? 'Backup cifrado guardado' : 'Backup guardado');
+    },
+  });
 
   $('#sImp').onclick = () => $('#sFile').click();
   $('#sFile').onchange = async e => {
     const f = e.target.files?.[0];
     if (!f) return;
-    try {
-      importJSON(await f.text());
+    e.target.value = '';
+    restoreBackup(await f.text(), json => {
+      importJSON(json);
       applyAccent(state.settings.accent);
       hooks.onBackground();
       hooks.onSchedule();
       commit();
       closeModal();
-      toast('Backup importado');
+      toast('Backup reposto');
       refresh({ force: true });
-    } catch {
-      toast('Ficheiro inválido', true);
-    }
+    }, modalSettings);
   };
 
   const undoBtn = $('#sUndo');
@@ -188,7 +190,7 @@ export function modalSettings() {
 function backupInfo() {
   const d = daysSinceBackup();
   if (d == null) return 'Ainda não fizeste nenhum backup.';
-  return `Último backup ${d === 0 ? 'hoje' : d === 1 ? 'ontem' : `há ${d} dias`}. Guarda posições, histórico, fundos, alertas e definições.`;
+  return `Último backup ${d === 0 ? 'hoje' : d === 1 ? 'ontem' : `há ${d} dias`}. Guarda posições, histórico, fundos, alertas e definições — cifrado com palavra-passe, se quiseres.`;
 }
 
 const undoWhen = ts => new Date(ts).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });

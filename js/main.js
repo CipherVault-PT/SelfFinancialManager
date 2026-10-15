@@ -1,6 +1,6 @@
 import { REFRESH, STORAGE_KEY } from './config.js';
 import { state, load, save, subscribe, commit, hasData } from './store.js';
-import { saveBackup, snoozeBackup, requestPersistence } from './backup.js';
+import { snoozeBackup, requestPersistence } from './backup.js';
 import { refresh, onAlerts, net } from './quotes/index.js';
 import { renderAll, renderStatus, renderView, rebalanceTable, ui } from './ui/render.js';
 import { $, $$, toast, closeModal, modalOpen } from './ui/dom.js';
@@ -15,6 +15,7 @@ import { modalDividend } from './ui/modal-dividend.js';
 import { removeDividend } from './dividends.js';
 import { modalClassify } from './ui/modal-classify.js';
 import { modalImport } from './ui/modal-import.js';
+import { modalBackup } from './ui/modal-backup.js';
 import { modalPlan, modalPlanRun, skipPlan, modalGoal, modalTargets } from './ui/modal-planning.js';
 import { initPWA } from './pwa.js';
 import { initLock, isLocked } from './ui/lock-screen.js';
@@ -92,11 +93,13 @@ const ACTIONS = {
   'chart-range': (_, el) => { ui.chartDays = +el.dataset.days; renderView(); },
   'alloc-dim': (_, el) => { ui.allocDim = el.dataset.dim; renderView(); },
   classify: modalClassify,
-  'backup-now': async () => {
-    if (!(await saveBackup())) return;
-    commit();
-    toast('Backup guardado');
-  },
+  'backup-now': () => modalBackup({
+    onSaved: sealed => {
+      closeModal();
+      commit();
+      toast(sealed ? 'Backup cifrado guardado' : 'Backup guardado');
+    },
+  }),
   'backup-later': () => {
     snoozeBackup();
     commit();
