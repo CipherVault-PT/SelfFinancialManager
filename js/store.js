@@ -5,6 +5,7 @@ export const defaultSettings = () => ({
   displayCurrency: 'EUR', fxManual: null, apiKey: '', refreshMin: 5, fxFeePct: 0.5,
   proxyUrl: '', bgStyle: 'aurora', accent: 'gold',
   createdAt: null, lastBackup: null, backupSnoozeUntil: 0, cashDest: {},
+  goal: null, targets: {},
 });
 
 export const defaultCache = () => ({
@@ -18,6 +19,9 @@ export const state = {
   settings: defaultSettings(),
   cache: defaultCache(),
 };
+
+/** Plano de poupança válido (ver plans.js). */
+export const validPlan = pl => !!pl && pl.amount > 0 && /^\d{4}-\d{2}-\d{2}$/.test(pl.next ?? '') && pl.day >= 1 && pl.day <= 28;
 
 const listeners = new Set();
 export const subscribe = fn => { listeners.add(fn); return () => listeners.delete(fn); };
@@ -85,6 +89,7 @@ function normalizePosition(p) {
   }
   out.lots = out.lots.map(normalizeLot);
   delete out.invested; delete out.entryPrice;
+  if (out.plan && !validPlan(out.plan)) delete out.plan;
   if (out.kind === 'stock' && out.quoteSymbol === undefined) {
     const s = resolveStock(out.symbol, out.exchange);
     out.quoteSymbol = s ? s.y : (out.symbol || null);
