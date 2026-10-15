@@ -71,23 +71,32 @@ export function bindSyncSection(back) {
 
 /* ---------- guia da Cloudflare ---------- */
 
+export const DEPLOY_URL = 'https://deploy.workers.cloudflare.com/?url=https://github.com/CipherVault-PT/SelfFinancialManager/tree/main/worker';
+
 export function modalSyncGuide(back = closeModal) {
   const step = (n, html) => `<div class="guide-step"><span class="guide-n">${n}</span><div>${html}</div></div>`;
   openModal(`<div class="mh"><h3>Criar o teu Worker</h3><button type="button" class="x" id="sgBack" aria-label="Voltar">✕</button></div>
-    <p class="mlead">Uma vez só, de preferência no computador (é mais fácil copiar e colar). Grátis: o plano gratuito chega e sobra.</p>
+    <p class="mlead">Uma vez só, e grátis: o plano gratuito chega e sobra. Funciona bem no telemóvel — não é preciso copiar código.</p>
+    <a class="btn pri wide" id="sgDeploy" href="${DEPLOY_URL}" target="_blank" rel="noopener" style="margin-bottom:12px">🚀 Criar o Worker na Cloudflare</a>
     <div class="guide">
-      ${step(1, 'Cria conta grátis em <a class="lnk" href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener">dash.cloudflare.com</a> (ou entra na que já tens).')}
-      ${step(2, 'Cria o <b>cofre</b>: no menu, <b>Storage &amp; Databases → KV</b> → <b>Create</b> → nome <code>aurora-sync</code>.')}
-      ${step(3, 'Cria o <b>Worker</b>: <b>Workers &amp; Pages → Create → Create Worker</b> → nome <code>aurora</code> → <b>Deploy</b>.')}
-      ${step(4, `Carrega em <b>Edit code</b>, apaga o que lá está e cola o código da Aurora → <b>Deploy</b>.<br>
-        <button type="button" class="btn ghost sm" id="sgCopy" style="margin-top:8px">📋 Copiar o código do Worker</button>`)}
-      ${step(5, 'Liga o cofre ao Worker: no Worker, <b>Settings → Bindings → Add → KV namespace</b>. Nome da variável: <code>SYNC</code> · namespace: <code>aurora-sync</code> → <b>Deploy</b>.')}
-      ${step(6, 'Copia o endereço do Worker (ex: <code>https://aurora.o-teu-nome.workers.dev</code>).')}
-      ${step(7, 'Aqui na app: <b>Ligar</b> → cola o endereço e escolhe uma frase-passe. Nos outros dispositivos, o <b>mesmo endereço</b> e a <b>mesma frase-passe</b>.')}
+      ${step(1, 'Entra na Cloudflare (ou cria conta grátis) e, quando pedir, <b>liga o GitHub</b>: a Cloudflare guarda lá uma cópia do código e instala-o daí.')}
+      ${step(2, 'Deixa o nome <code>aurora</code> e carrega em <b>Create and deploy</b>. O cofre (KV) é criado sozinho. Espera ~1 minuto.')}
+      ${step(3, 'Copia o endereço do Worker (ex: <code>https://aurora.o-teu-nome.workers.dev</code>).')}
+      ${step(4, 'Aqui na app: <b>Ligar</b> → cola o endereço e escolhe uma frase-passe. Nos outros dispositivos, o <b>mesmo endereço</b> e a <b>mesma frase-passe</b>.')}
     </div>
-    <textarea class="inp mono guide-code" id="sgCode" readonly hidden></textarea>
-    <div class="curhint">Já tinhas o atalho das cotações? Basta trocar o código (passo 4) e fazer os passos 2 e 5 — o endereço mantém-se.</div>
-    <button type="button" class="btn pri wide" id="sgNext" style="margin-top:14px">Já está — ligar</button>`);
+    <details class="guide-alt">
+      <summary>Sem GitHub: à mão, no computador</summary>
+      <div class="guide">
+        ${step(1, 'Em <a class="lnk" href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a>: <b>Storage &amp; Databases → KV</b> → <b>Create</b> → nome <code>aurora-sync</code>.')}
+        ${step(2, '<b>Workers &amp; Pages → Create → Create Worker</b> → nome <code>aurora</code> → <b>Deploy</b>.')}
+        ${step(3, `<b>Edit code</b>, apaga o que lá está e cola o código da Aurora → <b>Deploy</b>.<br>
+          <button type="button" class="btn ghost sm" id="sgCopy" style="margin-top:8px">📋 Copiar o código do Worker</button>`)}
+        ${step(4, 'No Worker: <b>Settings → Bindings → Add → KV namespace</b>. Nome da variável: <code>SYNC</code> · namespace: <code>aurora-sync</code> → <b>Deploy</b>.')}
+      </div>
+      <textarea class="inp mono guide-code" id="sgCode" readonly hidden></textarea>
+    </details>
+    <div class="curhint">Ao ligar, as cotações passam também a usar este Worker.</div>
+    <button type="button" class="btn ghost wide" id="sgNext" style="margin-top:14px">Já está — ligar</button>`);
   $('#sgBack').onclick = back;
   $('#sgNext').onclick = () => modalSyncSetup(back);
   $('#sgCopy').onclick = async () => {
@@ -187,7 +196,7 @@ export function modalSyncSetup(back = closeModal) {
       go.textContent = 'Ligar';
       return toast(e.message, true);
     }
-    if (!(state.settings.proxyUrl || '').trim()) { state.settings.proxyUrl = conn.cfg.url; commit(); }
+    if (state.settings.proxyUrl !== conn.cfg.url) { state.settings.proxyUrl = conn.cfg.url; commit(); }
     const remote = conn.remote;
     if (remote && hasData() && userPart(remote.data) !== userPart(state)) return chooseData(conn, back);
     await run(() => finishConnect(conn, remote ? 'remote' : 'local'));

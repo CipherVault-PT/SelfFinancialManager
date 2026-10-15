@@ -1,0 +1,7 @@
+{
+  "name": "aurora",
+  "main": "aurora-worker.js",
+  "compatibility_date": "2025-10-01",
+  // Cofre da sincronização: sem "id", a Cloudflare cria o namespace no primeiro deploy.
+  "kv_namespaces": [{ "binding": "SYNC" }]
+}
