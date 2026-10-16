@@ -31,6 +31,8 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Rebalancear**: alocação alvo por ativo (o mesmo ETF em várias corretoras conta junto) e quanto pôr em cada um no próximo investimento para te aproximares do alvo sem vender.
 - **Rentabilidade sem a inflação**: o ganho em poder de compra, descontando a inflação de Portugal (IHPC mensal do BCE).
 - **Sincronização entre dispositivos** cifrada de ponta a ponta, através do teu Worker da Cloudflare (ver abaixo).
+- **Estado das bolsas**: faixa com as bolsas das tuas ações — aberta, pré-mercado, pós-mercado ou fechada, até quando e quando abre — na tua hora, com a mudança de hora de cada país, feriados principais e meios-dias (o Yahoo corrige o horário do próprio dia). Toca para ver o horário de todas as bolsas.
+- **Pré e pós-mercado dos EUA**: fora do horário normal, as ações dos EUA mostram o último preço do pré/pós-mercado e quanto isso mexe na posição (e no total, na faixa). O valor da carteira continua a contar com o preço do horário normal.
 - **Alertas de preço** com notificações.
 - **Gráfico da evolução do património** (1M / 3M / 1A / Tudo).
 - Funciona offline com os últimos dados (service worker).
@@ -76,6 +78,7 @@ js/
   allocation.js         distribuição por setor, país e moeda; concentração
   performance.js        rentabilidade: TIR (XIRR) e comparação com o S&P 500
   inflation.js          inflação de Portugal (IHPC do BCE) e rentabilidade real
+  markets.js            horário das bolsas, feriados, fusos horários e pré/pós-mercado
   plans.js              planos de poupança mensais
   goals.js              metas: projeção com juros compostos, regra dos 4%
   rebalance.js          alocação alvo e sugestão de onde investir
@@ -105,4 +108,4 @@ Ideias faladas mas ainda por fazer (ou postas de parte) estão em [`IDEIAS.md`](
 npm test
 ```
 
-Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, o destino do dinheiro das vendas e compras, as transferências, os planos de poupança, as metas, o rebalanceamento, a inflação, a sincronização (dois dispositivos contra o Worker com um cofre simulado), a distribuição (incluindo que todas as ações da base têm setor e país), os backups (incluindo os cifrados: palavra errada, ficheiro adulterado), a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.
+Os testes cobrem os cálculos (taxas, conversões, P/L, vendas FIFO, alertas, histórico), o relatório IRS, os dividendos, a rentabilidade (TIR e comparação com o índice), a importação de extratos (Excel gerado nos testes), o PIN do bloqueio, o destino do dinheiro das vendas e compras, as transferências, os planos de poupança, as metas, o rebalanceamento, a inflação, a sincronização (dois dispositivos contra o Worker com um cofre simulado), a distribuição (incluindo que todas as ações da base têm setor e país), os backups (incluindo os cifrados: palavra errada, ficheiro adulterado), o horário das bolsas (feriados, mudança de hora, pré/pós-mercado), a migração dos dados da versão anterior, os parsers das APIs com respostas simuladas, a base de ações e o Worker.

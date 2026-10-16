@@ -17,6 +17,7 @@ import { monthsToGoal, addMonths, fourPercentMonthly, DEFAULT_RATE } from '../go
 import { holdings, suggest } from '../rebalance.js';
 import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } from '../format.js';
 import { $, $$ } from './dom.js';
+import { marketStrip, extLine } from './markets-ui.js';
 
 const CLR = { crypto: 'var(--brass)', stock: 'var(--indigo)', cash: 'var(--slate)' };
 const platClass = p => PLATFORM_CLASS[p] ?? '';
@@ -27,6 +28,7 @@ export const ui = { tab: 'painel', chartDays: 90, expanded: new Set(), allocDim:
 export function renderAll() {
   const a = agg();
   renderHero(a);
+  renderMarkets();
   renderTiles(a);
   renderCounts();
   renderView(a);
@@ -50,6 +52,12 @@ function renderHero(a) {
     : [];
   $('#ribbon').innerHTML = segs.map(([, v, c]) => `<span style="width:${(v / tot) * 100}%;background:${c}"></span>`).join('');
   $('#rleg').innerHTML = segs.map(([n, v, c]) => `<div><i style="background:${c}"></i>${n} <b>${((v / tot) * 100).toFixed(0)}%</b></div>`).join('');
+}
+
+export function renderMarkets() {
+  const el = $('#mkts');
+  el.innerHTML = marketStrip(state.positions);
+  el.hidden = !el.innerHTML;
 }
 
 function renderTiles(a) {
@@ -146,6 +154,7 @@ function positionCard(p) {
       <div class="pg"><span class="gk">Custo · Valor</span><span class="gv">${money(m.cost, p.currency)} · ${money(m.valPos, p.currency)}</span></div>
       <div class="pg"><span class="gk">Cotação ${esc(m.nativeCur)}</span><span class="gv">${price(m.nativePrice, m.nativeCur)}</span></div>
     </div>
+    ${extLine(p, m)}
     ${divNet ? `<div class="divline">💰 Dividendos <b class="up">${signed(divNet, money(divNet, p.currency))}</b> · retorno total <b class="${upDown(totalRet)}">${pct(totalRet)}</b></div>` : ''}
     ${lotsHtml}
     <div class="pos-act">

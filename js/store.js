@@ -9,7 +9,7 @@ export const defaultSettings = () => ({
 });
 
 export const defaultCache = () => ({
-  prices: {}, stockPrices: {}, stockMiss: {}, rates: { ...DEFAULT_RATES },
+  prices: {}, stockPrices: {}, stockMiss: {}, sessions: {}, rates: { ...DEFAULT_RATES },
   updated: null, stockUpdated: null, fxUpdated: null, proxyPref: null,
 });
 
