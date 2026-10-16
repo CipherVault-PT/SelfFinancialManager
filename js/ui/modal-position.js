@@ -11,6 +11,7 @@ import { esc, money, price, pct, signed, units, sym, num, inputNum, todayISO } f
 import { $, toast, openModal, closeModal, segmented, debounce } from './dom.js';
 import { coinSearch, stockSearch } from './asset-search.js';
 import { removeWatch } from '../watchlist.js';
+import { journalLine } from './modal-journal.js';
 import { lotForm } from './lot-form.js';
 import { cashPicker } from './cash-pick.js';
 import { ui } from './render.js';
@@ -281,6 +282,7 @@ export function modalClose(id) {
     <div class="picked" style="margin-bottom:16px;background:var(--surface-2);border-color:var(--line-2)">
       ${p.kind === 'crypto' && p.thumb ? `<img src="${esc(p.thumb)}" alt="">` : `<div class="tkn">${esc((p.symbol || p.name).slice(0, 3))}</div>`}
       <div><div class="rn">${esc(p.name)}</div><div class="rs">${units(m.u)} ${unit} · ${esc(p.platform)} · resultado em ${esc(csym)}</div></div></div>
+    ${p.journal ? `<div class="mlabel">O teu plano</div>${journalLine(p, m)}<div style="height:12px"></div>` : ''}
     <div id="cForm">
       <div class="field"><label for="cQty">Quantidade a vender <span class="sublbl">tens ${units(m.u)}</span></label>
         <div class="pqrow"><input class="inp mono" id="cQty" inputmode="decimal" autocomplete="off" value="${inputNum(m.u, 8)}">
@@ -290,6 +292,8 @@ export function modalClose(id) {
       ${cross ? '<div id="cAdjArea"></div>' : ''}
       <div class="field"><label for="cDate">Data da venda</label><input class="inp" id="cDate" type="date" max="${todayISO()}" value="${todayISO()}"></div>
       <div id="cCash"></div>
+      <div class="field"><label for="cNote">Nota para o diário <span class="sublbl">opcional</span></label>
+        <textarea class="inp" id="cNote" rows="2" placeholder="Porque vendes? Correu como planeado?"></textarea></div>
       <div class="preview big" id="cPrev"></div>
       <div class="curhint" id="cFifo" hidden>Venda parcial pelo método <b>FIFO</b> (as compras mais antigas saem primeiro), como manda o IRS. O preço médio das que ficam pode diferir do que a corretora mostra.</div>
     </div>
@@ -368,6 +372,8 @@ export function modalClose(id) {
       ...p, lots: sold, exitPrice: num($('#cExit').value), exitCur: exCur, proceeds: pr,
       closedAt: $('#cDate').value || todayISO(),
     };
+    const note = $('#cNote').value.trim().slice(0, 1000);
+    if (note) sale.note = note;
     if (full) {
       state.positions = state.positions.filter(x => x.id !== id);
       dropAlertsFor(id);
@@ -434,7 +440,7 @@ export function undoSale(id) {
     target.lots = mergeLots(target.lots, rec.lots);
   } else {
     const reopened = { ...rec, id: posId };
-    for (const k of ['exitPrice', 'exitCur', 'proceeds', 'closedAt', 'partial', 'parentId']) delete reopened[k];
+    for (const k of ['exitPrice', 'exitCur', 'proceeds', 'closedAt', 'partial', 'parentId', 'note']) delete reopened[k];
     state.positions.push(reopened);
   }
   commit();

@@ -82,8 +82,19 @@ function normalizeLot(l) {
   };
 }
 
+/** Diário de uma posição: tese, alvo e stop (preços na moeda em que cota). */
+export function normalizeJournal(j) {
+  if (!j || typeof j !== 'object') return null;
+  const pos = v => (n(v) > 0 ? n(v) : null);
+  const out = { thesis: String(j.thesis || '').slice(0, 1000), target: pos(j.target), stop: pos(j.stop), cur: j.cur || null };
+  return out.thesis || out.target || out.stop ? out : null;
+}
+
 function normalizePosition(p) {
   const out = { ...p };
+  const journal = normalizeJournal(out.journal);
+  if (journal) out.journal = journal; else delete out.journal;
+  if (typeof out.note === 'string' && out.note.trim()) out.note = out.note.trim().slice(0, 1000); else delete out.note;
   if (!Array.isArray(out.lots) || !out.lots.length) {
     const shares = n(p.entryPrice) > 0 ? n(p.invested) / n(p.entryPrice) : 0;
     out.lots = [{ shares, cost: n(p.invested), priceQ: null, priceCur: null, date: p.openedAt || '' }];
