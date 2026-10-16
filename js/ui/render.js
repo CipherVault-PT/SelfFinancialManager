@@ -19,12 +19,13 @@ import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } f
 import { $, $$ } from './dom.js';
 import { marketStrip, extLine } from './markets-ui.js';
 import { viewWatch } from './watch-ui.js';
+import { journalLine, journalSection } from './modal-journal.js';
 
 const CLR = { crypto: 'var(--brass)', stock: 'var(--indigo)', cash: 'var(--slate)' };
 const platClass = p => PLATFORM_CLASS[p] ?? '';
 const upDown = v => (v >= 0 ? 'up' : 'down');
 
-export const ui = { tab: 'painel', chartDays: 90, expanded: new Set(), allocDim: 'sector', rbAmount: null };
+export const ui = { tab: 'painel', chartDays: 90, expanded: new Set(), allocDim: 'sector', rbAmount: null, journalPeriod: 'year' };
 
 export function renderAll() {
   const a = agg();
@@ -157,6 +158,7 @@ function positionCard(p) {
       <div class="pg"><span class="gk">Cotação ${esc(m.nativeCur)}</span><span class="gv">${price(m.nativePrice, m.nativeCur)}</span></div>
     </div>
     ${extLine(p, m)}
+    ${journalLine(p, m)}
     ${divNet ? `<div class="divline">💰 Dividendos <b class="up">${signed(divNet, money(divNet, p.currency))}</b> · retorno total <b class="${upDown(totalRet)}">${pct(totalRet)}</b></div>` : ''}
     ${lotsHtml}
     <div class="pos-act">
@@ -168,6 +170,7 @@ function positionCard(p) {
       <div class="acts-ic">
       <button class="btn xic ${validPlan(p.plan) ? 'on' : ''}" data-action="plan" data-id="${id}" title="Plano mensal" aria-label="Plano de poupança mensal">🔁</button>
       ${isStock ? `<button class="btn xic ${divNet ? 'on' : ''}" data-action="dividend" data-id="${id}" title="Dividendos" aria-label="Dividendos">💰</button>` : ''}
+      <button class="btn xic ${p.journal ? 'on' : ''}" data-action="journal" data-id="${id}" title="Diário: tese, alvo e stop" aria-label="Diário da posição">📓</button>
       <button class="btn xic ${hasAlert ? 'on' : ''}" data-action="alert" data-id="${id}" title="Alerta de preço" aria-label="Alertas de preço">🔔</button>
       <button class="btn xic" data-action="delete" data-id="${id}" title="Apagar (corrigir erro)" aria-label="Apagar posição">🗑</button>
       </div>
@@ -407,7 +410,7 @@ function viewHistory() {
   if (!sales && !divs) {
     return empty('Sem histórico ainda', 'Quando venderes (no todo ou em parte) ou receberes dividendos, aparecem aqui — o teu registo completo para o IRS.', 'Ver posições', 'go-positions');
   }
-  return `${sales ? salesSection() : ''}${dividendSection(!sales)}`;
+  return `${sales ? journalSection(ui.journalPeriod) + salesSection() : ''}${dividendSection(!sales)}`;
 }
 
 const dest = id => { const l = saleCashLabel(id); return l ? ` · → ${esc(l)}` : ''; };
@@ -422,7 +425,7 @@ function salesSection() {
       <div class="r">${money(pCost(p), p.currency)} → ${money(m.proceeds, p.currency)}</div>
       <div class="r ${plc}">${signed(m.pl, money(m.pl, p.currency))}</div>
       <div class="r ${plc}">${pct(m.plp)}</div>
-      <div class="r"><button class="x hx" data-action="undo-sale" data-id="${esc(p.id)}" title="Anular venda" aria-label="Anular venda">↶</button></div>
+      <div class="r hx-r"><button class="x hx jb${p.journal || p.note ? ' on' : ''}" data-action="trade" data-id="${esc(p.id)}" title="Diário desta venda" aria-label="Diário desta venda">📓</button><button class="x hx" data-action="undo-sale" data-id="${esc(p.id)}" title="Anular venda" aria-label="Anular venda">↶</button></div>
     </div>`;
   }).join('');
   const tot = state.closed.reduce((s, p) => s + closedM(p).plD, 0);

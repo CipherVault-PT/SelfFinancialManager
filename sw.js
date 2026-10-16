@@ -1,5 +1,5 @@
 // Service worker: rede primeiro (para receber sempre a versão nova) e cache como reserva offline.
-const CACHE = 'aurora-v18';
+const CACHE = 'aurora-v19';
 const SHELL = [
   './',
   './index.html',
@@ -24,6 +24,7 @@ const SHELL = [
   './js/history.js',
   './js/import/apply.js',
   './js/inflation.js',
+  './js/journal.js',
   './js/markets.js',
   './js/import/xlsx.js',
   './js/import/xtb.js',
@@ -55,6 +56,7 @@ const SHELL = [
   './js/ui/modal-classify.js',
   './js/ui/modal-dividend.js',
   './js/ui/modal-import.js',
+  './js/ui/modal-journal.js',
   './js/ui/modal-backup.js',
   './js/ui/modal-lock.js',
   './js/ui/modal-planning.js',

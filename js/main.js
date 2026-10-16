@@ -5,6 +5,7 @@ import { refresh, onAlerts, net } from './quotes/index.js';
 import { renderAll, renderStatus, renderView, renderMarkets, rebalanceTable, ui } from './ui/render.js';
 import { modalMarkets } from './ui/markets-ui.js';
 import { modalWatchAdd, modalWatchEdit, watchBuy, watchDelete } from './ui/watch-ui.js';
+import { modalJournal, modalTrade } from './ui/modal-journal.js';
 import { $, $$, toast, closeModal, modalOpen } from './ui/dom.js';
 import { applyAccent } from './ui/theme.js';
 import { initBackground } from './ui/background.js';
@@ -72,6 +73,9 @@ const ACTIONS = {
   'watch-edit': modalWatchEdit,
   'watch-buy': watchBuy,
   'watch-del': watchDelete,
+  journal: modalJournal,
+  trade: modalTrade,
+  'journal-period': (_, el) => { ui.journalPeriod = el.dataset.p; renderView(); },
   'modal-close': closeModal,
   'go-positions': () => switchTab('posicoes'),
   reinforce: modalReinforce,
