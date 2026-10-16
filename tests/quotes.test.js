@@ -79,18 +79,18 @@ test('ações: tickers repetidos têm cotações separadas; intermediário próp
 
 test('ações: intermediários públicos em sequência, memória do que funcionou e pausa após falhas', async () => {
   reset();
-  state.positions = [stockPos({ quoteSymbol: 'AAPL' })];
-  let calls = mockFetch([['codetabs', chart({ regularMarketPrice: 200, currency: 'USD' })]]);
+  state.positions = [stockPos({ quoteSymbol: 'SAP.DE', quoteCur: 'EUR' })]; // fora dos EUA: sem pedidos extra de pré/pós-mercado
+  let calls = mockFetch([['codetabs', chart({ regularMarketPrice: 200, currency: 'EUR' })]]);
   assert.equal((await fetchStockQuotes({ force: true })).ok, 1);
   assert.equal(state.cache.proxyPref, 'codetabs');
   assert.equal(calls.length, 3);
 
-  calls = mockFetch([['codetabs', chart({ regularMarketPrice: 201, currency: 'USD' })]]);
+  calls = mockFetch([['codetabs', chart({ regularMarketPrice: 201, currency: 'EUR' })]]);
   await fetchStockQuotes({ force: true });
   assert.equal(calls.length, 1, 'tenta primeiro o intermediário que funcionou');
 
   calls = mockFetch([['codetabs', { chart: { result: null, error: { code: 'Not Found' } } }]]);
-  state.positions[0].quoteSymbol = 'NOPE';
+  state.positions[0].quoteSymbol = 'NOPE.DE';
   assert.equal((await fetchStockQuotes({ force: true })).fail, 1);
   assert.equal(calls.length, 1, 'resposta válida sem dados não tenta outros intermediários');
   calls = mockFetch([]);

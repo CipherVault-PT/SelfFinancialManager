@@ -614,3 +614,5 @@ a.btn{text-decoration:none}
 .extp-f b{font-weight:600}
 .extp-note{margin-top:8px;font-size:11px;color:var(--muted-2)}
 @media(max-width:480px){.extp-r{grid-template-columns:1fr auto auto;row-gap:2px}.extp-n{grid-column:1/-1}}
+.extp-none{grid-column:span 2;text-align:right;font-size:11.5px;color:var(--muted-2)}
+.extp-tag{display:block;font-size:10px;color:var(--muted-2);font-family:var(--body)}

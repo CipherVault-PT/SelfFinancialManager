@@ -7,6 +7,8 @@ import { marketOf, marketStatus, noteSession, extFromChart, FUTURES, futuresWant
 
 /** Com `ext`, pede o dia em intervalos de 5 min com o pré e o pós-mercado (ações dos EUA fora do horário normal). */
 const yahooChartUrl = (y, ext = false) => `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?${ext ? 'interval=5m&range=1d&includePrePost=true' : 'interval=1d&range=1d'}`;
+/** Últimos dias em intervalos de 1 h com o pós-mercado: dá o fecho do pós-mercado de ontem. */
+const yahooPostUrl = y => `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?interval=1h&range=5d&includePrePost=true`;
 const yahooSearchUrl = q => `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=10&newsCount=0&listsCount=0`;
 
 /** Intermediários públicos com CORS (gratuitos, por vezes instáveis). O Yahoo não permite pedidos diretos do browser. */
@@ -94,6 +96,22 @@ export async function twelveDataQuote(y, key) {
 /** Fora do horário normal dos EUA vale a pena pedir o pré/pós-mercado. */
 const wantsExt = y => marketOf(y) === 'us' && marketStatus('us').phase !== 'open';
 
+const isChart = d => d && typeof d === 'object' && 'chart' in d;
+
+/**
+ * Ação dos EUA sem negócios no pré-mercado: mostra o fecho do pós-mercado de ontem, como o Investing.
+ * Usa o que já estava guardado ou, uma vez por dia, pede-o ao Yahoo.
+ */
+export async function withLastPost(y, q, now = Date.now()) {
+  if (!q || q.ext || marketOf(y) !== 'us') return q;
+  const old = state.cache.stockPrices[y];
+  if (old?.ext?.phase === 'post' && old.price === q.price && now - old.ext.at < 20 * 3600_000) return { ...q, ext: old.ext };
+  if (marketStatus('us', now).phase !== 'pre' || old?.postChecked === q.price) return old?.postChecked ? { ...q, postChecked: old.postChecked } : q;
+  const r = await viaProxies(yahooPostUrl(y), isChart, d => parseYahooChart(d, y)).catch(() => null);
+  const ext = r?.ext?.phase === 'post' && Math.abs(r.price - q.price) < q.price * 1e-6 ? r.ext : null;
+  return { ...q, ...(ext ? { ext } : {}), postChecked: q.price };
+}
+
 /** Cotação de um símbolo: Yahoo (via intermediário) e, como reserva, Twelve Data se houver chave. */
 export async function quoteFor(y) {
   const q = await yahooQuote(y, wantsExt(y));
@@ -118,7 +136,7 @@ async function run({ force = false } = {}) {
   const todo = force ? syms : syms.filter(y => !(now - (miss[y] || 0) < REFRESH.stockMissBackoffMs));
   let ok = 0, fail = 0;
   await pool(todo, 3, async y => {
-    const q = await quoteFor(y);
+    const q = await withLastPost(y, await quoteFor(y));
     if (q) {
       state.cache.stockPrices[y] = { ...q, ts: Date.now() };
       for (const p of [...state.positions, ...state.watchlist]) if (p.quoteSymbol === y) p.quoteCur = q.cur;

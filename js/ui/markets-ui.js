@@ -26,7 +26,7 @@ function statusText(st, now) {
 
 /** Quanto as tuas ações dos EUA mexem no pré/pós-mercado, na moeda de visualização. */
 export function extMove(now = Date.now()) {
-  const rows = extRows(state.positions, now);
+  const rows = extRows(state.positions, now).filter(r => r.e);
   return rows.length ? rows.reduce((s, r) => s + r.effect, 0) : null;
 }
 
@@ -48,19 +48,20 @@ export function extPanel(now = Date.now()) {
   if (st.phase === 'open') return '';
   const rows = extRows(state.positions, now), fut = futuresNow(now);
   if (!rows.length && !fut.length) return '';
-  const d = disp(), total = rows.reduce((s, r) => s + r.effect, 0);
-  const phase = st.phase === 'pre' || st.phase === 'post' ? st.phase : rows[0]?.e.phase ?? 'post';
+  const d = disp(), withExt = rows.filter(r => r.e), total = withExt.reduce((s, r) => s + r.effect, 0);
+  const phase = st.phase === 'pre' || st.phase === 'post' ? st.phase : withExt[0]?.e.phase ?? 'post';
   const label = phase === 'pre' ? '🌅 Pré-mercado dos EUA' : '🌙 Pós-mercado dos EUA';
   const sub = st.phase === 'pre' ? `abre às ${hm(st.until)}` : st.phase === 'post' ? `até às ${hm(st.until)}` : `fechado · abre ${when(st.next?.open ?? now, now)}`;
   const etfs = fut.flatMap(f => f.etfs);
   return `<div class="extp" role="region" aria-label="${label}">
     <div class="extp-h"><b>${label}</b><span class="muted">${esc(sub)}</span>
-      ${rows.length ? `<b class="mono extp-t ${upDown(total)}">${signed(total, money(total, d))}</b>` : ''}</div>
+      ${withExt.length ? `<b class="mono extp-t ${upDown(total)}">${signed(total, money(total, d))}</b>` : ''}</div>
     ${rows.map(r => `<div class="extp-r">
       <span class="extp-n">${esc(r.p.name)}<small>${esc(r.p.symbol || '')}</small></span>
-      <span class="mono">${price(r.e.price, r.m.nativeCur)}</span>
+      ${r.e ? `<span class="mono">${price(r.e.price, r.m.nativeCur)}${r.e.phase !== phase ? '<small class="extp-tag">pós de ontem</small>' : ''}</span>
       <span class="mono ${upDown(r.e.pct)}">${pct(r.e.pct)}</span>
-      <span class="mono ${upDown(r.effect)}">${signed(r.effect, money(r.effect, d))}</span></div>`).join('')}
+      <span class="mono ${upDown(r.effect)}">${signed(r.effect, money(r.effect, d))}</span>`
+      : `<span class="mono">${price(r.m.nativePrice, r.m.nativeCur)}</span><span class="extp-none">ainda sem negócios</span>`}</div>`).join('')}
     ${fut.length ? `<div class="extp-f">📈 Futuros ${fut.map(f => `${esc(f.name)} <b class="${upDown(f.q.dayPct)}">${pct(f.q.dayPct)}</b>`).join(' · ')}
       <span class="muted">— ${etfs.length ? `indicam como podem abrir os teus ETFs (${esc(etfs.join(', '))})` : 'indicam como pode abrir o mercado'}</span></div>` : ''}
     <div class="extp-note">Fora do horário normal há menos volume e os preços mexem mais. O valor da carteira conta com o preço do horário normal.</div>
@@ -93,7 +94,8 @@ export function extLine(p, m) {
   }
   if (!m.live) return '';
   const delta = conv(m.u * (e.price - m.nativePrice), m.nativeCur, p.currency);
-  return `<div class="extline">${e.phase === 'pre' ? '🌅 Pré-mercado' : '🌙 Pós-mercado'}
+  const label = e.phase === 'pre' ? '🌅 Pré-mercado' : marketStatus('us').phase === 'pre' ? '🌙 Pós-mercado de ontem' : '🌙 Pós-mercado';
+  return `<div class="extline">${label}
     <b class="mono">${price(e.price, m.nativeCur)}</b> <span class="${e.pct >= 0 ? 'up' : 'down'}">${pct(e.pct)}</span>
     <span class="muted">· ${signed(delta, money(delta, p.currency))}</span></div>`;
 }
