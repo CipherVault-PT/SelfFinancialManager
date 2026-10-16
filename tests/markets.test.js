@@ -129,6 +129,9 @@ test('pré-mercado da carteira: efeito de cada ação dos EUA, do maior para o m
   };
   const rows = extRows(state.positions, now);
   assert.deepEqual(rows.map(r => [r.p.id, +r.effect.toFixed(2)]), [['b', -16], ['a', 8]], '2×(−10 US$) = −16 €; 10×1 US$ = 8 €');
+  state.positions.push(stockPos({ id: 'a2', quoteSymbol: 'AAA', symbol: 'AAA', platform: 'Trade Republic', lots: [lot(5, 400)] }));
+  const merged = extRows(state.positions, now);
+  assert.deepEqual(merged.map(r => [r.p.id, r.count, +r.effect.toFixed(2)]), [['b', 1, -16], ['a', 2, 12]], 'a mesma ação em duas corretoras: uma linha, 15×1 US$ = 12 €');
   assert.deepEqual(extRows(state.positions, at('2026-10-16T15:00:00Z')), [], 'com a bolsa aberta não há pré-mercado');
 });
 
