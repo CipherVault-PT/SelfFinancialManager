@@ -57,7 +57,7 @@ export function extPanel(now = Date.now()) {
     <div class="extp-h"><b>${label}</b><span class="muted">${esc(sub)}</span>
       ${withExt.length ? `<b class="mono extp-t ${upDown(total)}">${signed(total, money(total, d))}</b>` : ''}</div>
     ${rows.map(r => `<div class="extp-r">
-      <span class="extp-n">${esc(r.p.name)}<small>${esc(r.p.symbol || '')}</small></span>
+      <span class="extp-n">${esc(r.p.name)}<small>${esc(r.p.symbol || '')}${r.count > 1 ? ` · ${r.count} posições` : ''}</small></span>
       ${r.e ? `<span class="mono">${price(r.e.price, r.m.nativeCur)}${r.e.phase !== phase ? '<small class="extp-tag">pós de ontem</small>' : ''}</span>
       <span class="mono ${upDown(r.e.pct)}">${pct(r.e.pct)}</span>
       <span class="mono ${upDown(r.effect)}">${signed(r.effect, money(r.effect, d))}</span>`
