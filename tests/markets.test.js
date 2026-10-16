@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state } from '../js/store.js';
 import { MARKETS, easter, marketOf, marketStatus, sessionOn, isTradingDay, noteSession, extFromChart, extQuote, marketsHeld, zoned, extRows, trackedIndex, futuresWanted, futuresTime, futureQuote } from '../js/markets.js';
-import { fetchFutures, withLastPost } from '../js/quotes/stocks.js';
+import { fetchFutures, withLastPost, yahooChartUrl } from '../js/quotes/stocks.js';
 import { parseYahooChart } from '../js/quotes/stocks.js';
 import { reset, stockPos, lot, mockFetch } from './helpers.js';
 
@@ -195,4 +195,23 @@ test('pré-mercado sem negócios: usa o fecho do pós-mercado de ontem (guardado
   assert.equal(calls.length, 1, 'só pede uma vez por dia');
   assert.equal((await withLastPost('ZZA', q, at('2026-10-16T15:00:00Z'))).ext, undefined, 'com a bolsa aberta não');
   assert.equal(await withLastPost('SAP.DE', null, pre), null);
+});
+
+test('pré-mercado: pede uma janela explícita de 18 h (o "dia" do Yahoo antes da abertura ainda pode ser ontem)', () => {
+  const now = at('2026-10-16T08:24:30Z');
+  const u = new URL(yahooChartUrl('ZZA', true, now));
+  const p1 = +u.searchParams.get('period1'), p2 = +u.searchParams.get('period2');
+  assert.deepEqual([u.searchParams.get('interval'), u.searchParams.get('includePrePost'), u.searchParams.get('range')], ['5m', 'true', null]);
+  assert.equal(p2, at('2026-10-16T08:25:00Z') / 1000, 'arredondado ao minuto (cache)');
+  assert.equal(p2 - p1, 18 * 3600, 'apanha o pós-mercado de ontem e o pré-mercado de hoje');
+  assert.equal(yahooChartUrl('ZZA', true, now + 20_000), yahooChartUrl('ZZA', true, now));
+  assert.match(yahooChartUrl('SAP.DE'), /interval=1d&range=1d$/);
+
+  // resposta com o pós de ontem e o pré de hoje → fica o pré de hoje
+  reset();
+  const t = s => at(s) / 1000;
+  const d = { chart: { result: [{ meta: { regularMarketPrice: 7, chartPreviousClose: 6.8, currency: 'USD', dataGranularity: '5m' },
+    timestamp: [t('2026-10-15T19:55:00Z'), t('2026-10-15T22:30:00Z'), t('2026-10-16T08:15:00Z')],
+    indicators: { quote: [{ close: [7, 7.1, 7.4] }] } }], error: null } };
+  assert.deepEqual([extFromChart(d, 7).phase, extFromChart(d, 7).price], ['pre', 7.4]);
 });

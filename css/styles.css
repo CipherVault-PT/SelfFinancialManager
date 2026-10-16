@@ -616,3 +616,7 @@ a.btn{text-decoration:none}
 @media(max-width:480px){.extp-r{grid-template-columns:1fr auto auto;row-gap:2px}.extp-n{grid-column:1/-1}}
 .extp-none{grid-column:span 2;text-align:right;font-size:11.5px;color:var(--muted-2)}
 .extp-tag{display:block;font-size:10px;color:var(--muted-2);font-family:var(--body)}
+.mk-dgs{display:flex;flex-direction:column;gap:6px;margin:4px 0 14px}
+.mk-dg{padding:8px 11px;border-radius:10px;background:var(--bg-2);border:1px solid var(--line);font-size:12.5px}
+.mk-dg .mono{color:var(--muted);font-size:11.5px;margin-left:4px}
+.mk-dg small{display:block;color:var(--muted-2);font-size:11px;margin-top:2px}

@@ -1,6 +1,6 @@
 import { state } from '../store.js';
 import { conv, disp } from '../fx.js';
-import { MARKETS, marketStatus, marketsHeld, extQuote, extRows, FUTURES, trackedIndex, futuresWanted, futuresTime, futureQuote } from '../markets.js';
+import { MARKETS, marketStatus, marketsHeld, extQuote, extRows, FUTURES, trackedIndex, futuresWanted, futuresTime, futureQuote, marketOf } from '../markets.js';
 import { esc, money, price, pct, signed } from '../format.js';
 import { openModal } from './dom.js';
 
@@ -102,6 +102,23 @@ export function extLine(p, m) {
 
 const range = (a, b) => `${hm(a)}–${hm(b)}`;
 
+const SRC = { yahoo: 'Yahoo', twelvedata: 'Twelve Data (sem pré/pós-mercado)' };
+
+/** De onde vem a cotação de cada ação dos EUA e o último negócio fora de horas — para perceber o que falta. */
+function usDiagnostics(now) {
+  const list = state.positions.filter(p => p.kind === 'stock' && (marketOf(p.quoteSymbol) === 'us' || !p.quoteSymbol));
+  if (!list.length) return '';
+  const row = p => {
+    const q = p.quoteSymbol ? state.cache.stockPrices[p.quoteSymbol] : null;
+    const e = q?.ext;
+    const info = !p.quoteSymbol ? 'sem símbolo — preço à mão'
+      : !q ? 'sem cotação ainda'
+        : `${SRC[q.src] ?? 'Yahoo'} · atualizada ${hm(q.ts)}${e ? ` · último negócio fora de horas: ${e.phase === 'pre' ? 'pré' : 'pós'} ${when(e.at, now)} a ${price(e.price, q.cur)}` : q.src === 'twelvedata' ? '' : ' · sem negócios fora de horas no Yahoo'}`;
+    return `<div class="mk-dg"><b>${esc(p.name)}</b> <span class="mono">${esc(p.quoteSymbol || '—')}</span><small>${esc(info)}</small></div>`;
+  };
+  return `<div class="mlabel" style="margin-top:6px">As tuas ações dos EUA · dados fora de horas</div><div class="mk-dgs">${list.map(row).join('')}</div>`;
+}
+
 export function modalMarkets() {
   const now = Date.now();
   const held = new Set(marketsHeld([...state.positions, ...(state.watchlist ?? [])]));
@@ -120,6 +137,7 @@ export function modalMarkets() {
   openModal(`<div class="mh"><h3>Horário das bolsas</h3><button type="button" class="x" data-action="modal-close" aria-label="Fechar">✕</button></div>
     <p class="mlead">Na <b>tua hora</b> (já com a mudança de hora de cada país). ${held.size ? 'Em cima, as bolsas das tuas ações.' : ''}</p>
     <div class="mk-tbl">${rows}</div>
+    ${usDiagnostics(now)}
     <div class="perf-notes">
       <div><b>Pré e pós-mercado</b> só existem nos EUA: dá para negociar antes da abertura e depois do fecho, com menos volume e preços mais instáveis. A app mostra esses preços nas tuas ações dos EUA, mas o valor da carteira conta com o preço do horário normal.</div>
       <div><b>S&amp;P 500</b> é um índice dos EUA: mexe das ${esc(usTxt || '14:30 às 21:00')}. Os ETFs dele cotados na Europa (ex.: VUAA, CSPX) negoceiam no horário da bolsa europeia — por isso parecem "abrir às 8h".</div>
