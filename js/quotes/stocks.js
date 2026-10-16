@@ -4,6 +4,7 @@ import { fetchJSON, pool } from '../net.js';
 import { isCurrency } from '../format.js';
 import { micOf, twelveDataSymbol } from '../stocks.js';
 import { marketOf, marketStatus, noteSession, extFromChart, FUTURES, futuresWanted, futuresTime } from '../markets.js';
+import { cnbcExtended, mergeExtended } from './cnbc.js';
 
 const EXT_WINDOW = 18 * 3600;
 
@@ -54,9 +55,11 @@ function routes(url) {
 /**
  * Tenta cada intermediário até obter uma resposta reconhecida por `accept`.
  * Se a resposta for válida mas sem dados (ex: símbolo inexistente), pára logo.
+ * Com `publicFallback: false` só usa o atalho próprio (se houver).
  */
-export async function viaProxies(url, accept, parse) {
+export async function viaProxies(url, accept, parse, { publicFallback = true } = {}) {
   for (const r of routes(url)) {
+    if (!publicFallback && r.id !== 'custom') break;
     let d;
     try { d = await fetchJSON(r.href, { timeout: r.id === 'custom' ? 9000 : 7000 }); } catch { continue; }
     if (!accept(d)) continue;
@@ -97,7 +100,7 @@ export function parseTwelveData(d) {
 
 export const yahooQuote = async (y, ext = false) => {
   const q = await viaProxies(yahooChartUrl(y, ext), d => d && typeof d === 'object' && 'chart' in d, d => parseYahooChart(d, y));
-  return q && { ...q, src: 'yahoo' };
+  return q && { ...q, src: 'yahoo', ...(q.ext ? { ext: { ...q.ext, src: 'yahoo' } } : {}) };
 };
 
 export async function twelveDataQuote(y, key) {
@@ -159,6 +162,8 @@ async function run({ force = false } = {}) {
     else { miss[y] = Date.now(); fail++; }
   });
   if (ok) state.cache.stockUpdated = Date.now();
+  const us = syms.filter(y => marketOf(y) === 'us' && state.cache.stockPrices[y]);
+  if (us.length) mergeExtended(state.cache.stockPrices, await cnbcExtended(us, viaProxies).catch(() => ({})));
   return { ok, fail, total: syms.length };
 }
 

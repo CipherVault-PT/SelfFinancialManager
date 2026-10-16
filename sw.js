@@ -1,5 +1,5 @@
 // Service worker: rede primeiro (para receber sempre a versão nova) e cache como reserva offline.
-const CACHE = 'aurora-v23';
+const CACHE = 'aurora-v24';
 const SHELL = [
   './',
   './index.html',
@@ -37,6 +37,7 @@ const SHELL = [
   './js/quotes/crypto.js',
   './js/quotes/index.js',
   './js/quotes/stocks.js',
+  './js/quotes/cnbc.js',
   './js/rebalance.js',
   './js/stocks.js',
   './js/watchlist.js',

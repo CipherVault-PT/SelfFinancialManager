@@ -48,14 +48,14 @@ O plano gratuito chega e sobra (100 000 pedidos por dia; a app faz dezenas).
   apenas o SHA-256 da chave de acesso. **Se a esqueceres, a cópia na nuvem não se recupera** (os dados de cada
   dispositivo continuam lá) — guarda-a num gestor de passwords.
 - Depois de 10 tentativas erradas, o Worker bloqueia esse IP durante 15 minutos.
-- Cotações: só aceita pedidos para o Yahoo Finance e o BCE — não serve de proxy aberto. Respostas em cache 30 s.
+- Cotações: só aceita pedidos para o Yahoo Finance, a CNBC (pré/pós-mercado dos EUA) e o BCE — não serve de proxy aberto. Respostas em cache 30 s.
 - Para apagar tudo da nuvem: na app, **⚙ → Sincronização → Apagar a cópia na nuvem** (ou apaga as chaves no KV).
 
 ## Endpoints
 
 | Método | Caminho | Para quê |
 | --- | --- | --- |
-| GET | `/?url=…` | Cotação do Yahoo / série do BCE |
+| GET | `/?url=…` | Cotação do Yahoo / pré e pós-mercado da CNBC / série do BCE |
 | GET | `/status` | Estado (cotações, cofre ligado, cofre criado) |
 | GET | `/sync/meta` | Sal e iterações do cofre |
 | POST | `/sync/init` | Criar o cofre (ou mudar a frase-passe, com a chave atual) |

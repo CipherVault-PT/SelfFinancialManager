@@ -1,6 +1,6 @@
 // Cloudflare Worker da Aurora: atalho de cotações + cofre cifrado para sincronizar dispositivos.
 //
-// Cotações:  GET  /?url=<url codificado>   (só Yahoo Finance e BCE — não é um proxy aberto)
+// Cotações:  GET  /?url=<url codificado>   (só Yahoo Finance, CNBC e BCE — não é um proxy aberto)
 // Estado:    GET  /status
 // Cofre:     GET  /sync/meta               sal e iterações (públicos; sem eles não se deriva nada)
 //            POST /sync/init               cria o cofre (ou muda a frase-passe, com a chave atual)
@@ -13,7 +13,7 @@
 // derivada da frase-passe; aqui só se guarda o SHA-256 dela.
 // Para a sincronização, liga um KV namespace com o nome de variável SYNC (ver worker/README.md).
 
-const QUOTE_HOSTS = new Set(['query1.finance.yahoo.com', 'query2.finance.yahoo.com', 'data-api.ecb.europa.eu']);
+const QUOTE_HOSTS = new Set(['query1.finance.yahoo.com', 'query2.finance.yahoo.com', 'data-api.ecb.europa.eu', 'quote.cnbc.com']);
 const CACHE_SECONDS = 30;
 const MAX_BODY = 5 * 1024 * 1024;
 const MAX_FAILS = 10;
