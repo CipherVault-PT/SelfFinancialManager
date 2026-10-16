@@ -3,7 +3,7 @@ import { state } from '../store.js';
 import { fetchJSON, pool } from '../net.js';
 import { isCurrency } from '../format.js';
 import { micOf, twelveDataSymbol } from '../stocks.js';
-import { marketOf, marketStatus, noteSession, extFromChart } from '../markets.js';
+import { marketOf, marketStatus, noteSession, extFromChart, FUTURES, futuresWanted, futuresTime } from '../markets.js';
 
 /** Com `ext`, pede o dia em intervalos de 5 min com o pré e o pós-mercado (ações dos EUA fora do horário normal). */
 const yahooChartUrl = (y, ext = false) => `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?${ext ? 'interval=5m&range=1d&includePrePost=true' : 'interval=1d&range=1d'}`;
@@ -129,6 +129,18 @@ async function run({ force = false } = {}) {
   });
   if (ok) state.cache.stockUpdated = Date.now();
   return { ok, fail, total: syms.length };
+}
+
+/** Futuros dos índices dos teus ETFs (e do S&P 500), só fora do horário normal dos EUA. */
+export async function fetchFutures(now = Date.now()) {
+  if (!futuresTime(now)) return 0;
+  const ids = futuresWanted([...state.positions, ...state.watchlist]);
+  let got = 0;
+  await pool(ids, 2, async id => {
+    const y = FUTURES[id].y, q = await yahooQuote(y).catch(() => null);
+    if (q) { state.cache.stockPrices[y] = { ...q, ts: Date.now() }; got++; }
+  });
+  return got;
 }
 
 const SEARCH_TYPES = new Set(['EQUITY', 'ETF', 'MUTUALFUND']);

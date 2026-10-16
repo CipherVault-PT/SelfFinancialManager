@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state } from '../js/store.js';
-import { MARKETS, easter, marketOf, marketStatus, sessionOn, isTradingDay, noteSession, extFromChart, extQuote, marketsHeld, zoned } from '../js/markets.js';
+import { MARKETS, easter, marketOf, marketStatus, sessionOn, isTradingDay, noteSession, extFromChart, extQuote, marketsHeld, zoned, extRows, trackedIndex, futuresWanted, futuresTime, futureQuote } from '../js/markets.js';
+import { fetchFutures } from '../js/quotes/stocks.js';
 import { parseYahooChart } from '../js/quotes/stocks.js';
-import { reset, stockPos } from './helpers.js';
+import { reset, stockPos, lot, mockFetch } from './helpers.js';
 
 const at = s => Date.parse(s);
 const hhmm = ts => new Date(ts).toISOString().slice(11, 16);
@@ -110,4 +111,50 @@ test('pós-mercado: só se mostra fora do horário normal e enquanto é recente'
   assert.equal(extQuote('AAPL', at('2026-10-16T22:00:00Z')).price, 203);
   assert.equal(extQuote('AAPL', at('2026-10-19T15:00:00Z')), null, 'com a bolsa aberta, vale o preço normal');
   assert.equal(extQuote('AAPL', at('2026-10-18T22:00:00Z')), null, 'antigo');
+});
+
+test('pré-mercado da carteira: efeito de cada ação dos EUA, do maior para o menor', () => {
+  reset();
+  const now = at('2026-10-16T10:00:00Z'); // 11:00 em Lisboa, pré-mercado
+  state.positions = [
+    stockPos({ id: 'a', quoteSymbol: 'AAA', symbol: 'AAA', lots: [lot(10, 800)] }),
+    stockPos({ id: 'b', quoteSymbol: 'BBB', symbol: 'BBB', lots: [lot(2, 100)] }),
+    stockPos({ id: 'c', quoteSymbol: 'SAP.DE', symbol: 'SAP', quoteCur: 'EUR', lots: [lot(1, 100)] }),
+  ];
+  const ext = (price, pct) => ({ price, pct, phase: 'pre', at: now - 60_000 });
+  state.cache.stockPrices = {
+    AAA: { price: 100, cur: 'USD', ts: now, ext: ext(101, 1) },
+    BBB: { price: 50, cur: 'USD', ts: now, ext: ext(40, -20) },
+    'SAP.DE': { price: 100, cur: 'EUR', ts: now },
+  };
+  const rows = extRows(state.positions, now);
+  assert.deepEqual(rows.map(r => [r.p.id, +r.effect.toFixed(2)]), [['b', -16], ['a', 8]], '2×(−10 US$) = −16 €; 10×1 US$ = 8 €');
+  assert.deepEqual(extRows(state.positions, at('2026-10-16T15:00:00Z')), [], 'com a bolsa aberta não há pré-mercado');
+});
+
+test('futuros: ETFs europeus do S&P 500 / Nasdaq 100 e quando se mostram', async () => {
+  reset();
+  const etf = (symbol, name, y = `${symbol}.DE`) => stockPos({ id: symbol, symbol, name, quoteSymbol: y, quoteCur: 'EUR' });
+  assert.equal(trackedIndex(etf('VUAA', 'Vanguard S&P 500 UCITS ETF (Acc)')), 'sp500');
+  assert.equal(trackedIndex(etf('XYZ', 'iShares Core S&P 500 UCITS ETF', 'XYZ.L')), 'sp500');
+  assert.equal(trackedIndex(etf('EQQQ', 'Invesco EQQQ NASDAQ-100 UCITS ETF')), 'ndx');
+  assert.equal(trackedIndex(etf('VWCE', 'Vanguard FTSE All-World UCITS ETF')), null);
+  assert.equal(trackedIndex(stockPos({ symbol: 'SPY', name: 'SPDR S&P 500 ETF Trust', quoteSymbol: 'SPY' })), null, 'nos EUA tem o próprio pré-mercado');
+  assert.deepEqual(futuresWanted([etf('EQQQ', 'Nasdaq-100'), stockPos()]), ['sp500', 'ndx']);
+  assert.deepEqual(futuresWanted([etf('VWCE', 'All-World')]), []);
+
+  assert.equal(futuresTime(at('2026-10-16T10:00:00Z')), true, 'pré-mercado');
+  assert.equal(futuresTime(at('2026-10-16T15:00:00Z')), false, 'bolsa aberta');
+  assert.equal(futuresTime(at('2026-10-17T02:00:00Z')), true, 'noite de sexta');
+  assert.equal(futuresTime(at('2026-10-17T15:00:00Z')), false, 'fim de semana');
+
+  state.positions = [etf('VUAA', 'Vanguard S&P 500')];
+  const calls = mockFetch([['ES%253DF', { chart: { result: [{ meta: { regularMarketPrice: 6010, previousClose: 6000, currency: 'USD' } }], error: null } }]]);
+  assert.equal(await fetchFutures(at('2026-10-16T15:00:00Z')), 0, 'com a bolsa aberta não pede');
+  assert.equal(calls.length, 0);
+  assert.equal(await fetchFutures(at('2026-10-16T10:00:00Z')), 1);
+  const q = futureQuote('sp500', Date.now());
+  assert.equal(+q.dayPct.toFixed(3), 0.167);
+  assert.equal(futureQuote('sp500', Date.now() + 4 * 3600_000), null, 'antigo');
+  assert.equal(futureQuote('ndx'), null);
 });
