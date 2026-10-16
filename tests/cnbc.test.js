@@ -20,36 +20,36 @@ test('CNBC: endereço com vários símbolos e classes de ações (BRK-B → BRK.
 
 test('CNBC: lê o último negócio do pré/pós-mercado; ignora o horário normal e respostas estragadas', () => {
   const d = formatted([
-    { symbol: 'ZZA', last: '3.57', ExtendedMktQuote: ext('3.64', '2026-10-16T08:31:12.000-0400') },
+    { symbol: 'ZZA', last: '20.00', ExtendedMktQuote: ext('20.40', '2026-10-16T08:31:12.000-0400') },
     { symbol: 'BRK.B', last: '450', ExtendedMktQuote: ext('1,234.50', '', { type: 'POST_MKT', last_time_msec: String(at('2026-10-15T21:10:00Z')) }) },
-    { symbol: 'ZZB', last: '13.13', ExtendedMktQuote: ext('13.2', '2026-10-15T11:00:00.000-0400') }, // horário normal
-    { symbol: 'ZZC', last: '9.63' },
+    { symbol: 'ZZB', last: '50.00', ExtendedMktQuote: ext('50.5', '2026-10-15T11:00:00.000-0400') }, // horário normal
+    { symbol: 'ZZC', last: '9.00' },
     { symbol: 'BAD', ExtendedMktQuote: ext('abc', '2026-10-16T08:31:12.000-0400') },
   ]);
   const r = parseCnbc(d, ['ZZA', 'BRK-B', 'ZZB', 'ZZC', 'BAD']);
-  assert.deepEqual(r.ZZA, { price: 3.64, phase: 'pre', at: at('2026-10-16T12:31:12Z'), src: 'cnbc' });
+  assert.deepEqual(r.ZZA, { price: 20.4, phase: 'pre', at: at('2026-10-16T12:31:12Z'), src: 'cnbc' });
   assert.deepEqual(r['BRK-B'], { price: 1234.5, phase: 'post', at: at('2026-10-15T21:10:00Z'), src: 'cnbc' });
-  assert.deepEqual(Object.keys(r).sort(), ['ZZA', 'BRK-B']);
-  const quick = { QuickQuoteResult: { QuickQuote: { symbol: 'ZZA', extendedMktQuote: ext('3.65', '2026-10-16T08:40:00.000-0400') } } };
-  assert.equal(parseCnbc(quick, ['ZZA']).ZZA.price, 3.65, 'formato alternativo, com um só resultado');
+  assert.deepEqual(Object.keys(r).sort(), ['BRK-B', 'ZZA']);
+  const quick = { QuickQuoteResult: { QuickQuote: { symbol: 'ZZA', extendedMktQuote: ext('20.5', '2026-10-16T08:40:00.000-0400') } } };
+  assert.equal(parseCnbc(quick, ['ZZA']).ZZA.price, 20.5, 'formato alternativo, com um só resultado');
   assert.deepEqual(parseCnbc(null), {});
 });
 
 test('CNBC + Yahoo: fica o negócio mais recente; preços absurdos são ignorados', () => {
   const quotes = {
-    ZZA: { price: 3.57, ext: { price: 3.58, pct: 0.28, phase: 'post', at: at('2026-10-15T23:00:00Z'), src: 'yahoo' } },
-    ZZB: { price: 13.13, ext: { price: 13.23, pct: 0.76, phase: 'pre', at: at('2026-10-16T12:35:00Z'), src: 'yahoo' } },
-    ZZC: { price: 9.63 },
+    ZZA: { price: 20, ext: { price: 20.1, pct: 0.5, phase: 'post', at: at('2026-10-15T23:00:00Z'), src: 'yahoo' } },
+    ZZB: { price: 50, ext: { price: 50.4, pct: 0.8, phase: 'pre', at: at('2026-10-16T12:35:00Z'), src: 'yahoo' } },
+    ZZC: { price: 9 },
     OOPS: { price: 10 },
   };
   const used = mergeExtended(quotes, {
-    ZZA: { price: 3.64, phase: 'pre', at: at('2026-10-16T12:31:12Z'), src: 'cnbc' },
-    ZZB: { price: 13.19, phase: 'pre', at: at('2026-10-16T12:30:00Z'), src: 'cnbc' },
-    ZZC: { price: 9.61, phase: 'pre', at: at('2026-10-16T12:32:00Z'), src: 'cnbc' },
+    ZZA: { price: 20.4, phase: 'pre', at: at('2026-10-16T12:31:12Z'), src: 'cnbc' },
+    ZZB: { price: 50.2, phase: 'pre', at: at('2026-10-16T12:30:00Z'), src: 'cnbc' },
+    ZZC: { price: 8.9, phase: 'pre', at: at('2026-10-16T12:32:00Z'), src: 'cnbc' },
     OOPS: { price: 100, phase: 'pre', at: at('2026-10-16T12:32:00Z'), src: 'cnbc' },
   });
   assert.equal(used, 2);
-  assert.deepEqual([quotes.ZZA.ext.price, quotes.ZZA.ext.src, +quotes.ZZA.ext.pct.toFixed(2)], [3.64, 'cnbc', 1.96]);
+  assert.deepEqual([quotes.ZZA.ext.price, quotes.ZZA.ext.src, +quotes.ZZA.ext.pct.toFixed(2)], [20.4, 'cnbc', 2]);
   assert.equal(quotes.ZZB.ext.src, 'yahoo', 'o Yahoo tinha um negócio mais recente');
   assert.equal(quotes.ZZC.ext.src, 'cnbc');
   assert.equal(quotes.OOPS.ext, undefined, '10× o fecho: ignorado');
@@ -58,10 +58,10 @@ test('CNBC + Yahoo: fica o negócio mais recente; preços absurdos são ignorado
 test('CNBC: só no pré/pós-mercado, só pelo atalho próprio e pausa 15 min se não responder', async () => {
   reset({ settings: { proxyUrl: 'https://meu.workers.dev' } });
   const pre = at('2026-10-16T12:40:00Z');
-  let calls = mockFetch([['meu.workers.dev', formatted([{ symbol: 'ZZA', ExtendedMktQuote: ext('3.64', '2026-10-16T08:31:12.000-0400') }])]]);
+  let calls = mockFetch([['meu.workers.dev', formatted([{ symbol: 'ZZA', ExtendedMktQuote: ext('20.40', '2026-10-16T08:31:12.000-0400') }])]]);
   assert.deepEqual(await cnbcExtended(['ZZA'], viaProxies, at('2026-10-16T15:00:00Z')), {}, 'bolsa aberta: não pede');
   assert.equal(calls.length, 0);
-  assert.equal((await cnbcExtended(['ZZA'], viaProxies, pre)).ZZA.price, 3.64);
+  assert.equal((await cnbcExtended(['ZZA'], viaProxies, pre)).ZZA.price, 20.4);
   assert.equal(calls.length, 1);
   assert.ok(decodeURIComponent(calls[0]).includes('quote.cnbc.com'));
 
