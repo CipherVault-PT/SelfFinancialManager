@@ -39,7 +39,7 @@ export const syncEnabled = () => !!readCfg();
 export function userPart(d) {
   const settings = { ...d.settings };
   for (const k of VOLATILE) delete settings[k];
-  return JSON.stringify({ positions: d.positions, closed: d.closed, cash: d.cash, dividends: d.dividends, alerts: d.alerts, settings });
+  return JSON.stringify({ positions: d.positions, closed: d.closed, cash: d.cash, dividends: d.dividends, alerts: d.alerts, watchlist: d.watchlist ?? [], settings });
 }
 
 /** Junta dois históricos diários (por data; em caso de repetição fica o de `b`). */
@@ -203,7 +203,7 @@ async function remember(cfg, v) {
   writeCfg({ ...cfg, v, h: await sha256(lastUser), at: Date.now() });
 }
 
-const itemCount = d => ['positions', 'closed', 'cash', 'dividends'].reduce((s, k) => s + (d[k]?.length || 0), 0);
+const itemCount = d => ['positions', 'closed', 'cash', 'dividends', 'watchlist'].reduce((s, k) => s + (d[k]?.length || 0), 0);
 
 async function applyRemote(remote, { backup = false } = {}) {
   const local = JSON.parse(exportJSON());

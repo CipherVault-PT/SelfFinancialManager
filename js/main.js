@@ -4,6 +4,7 @@ import { snoozeBackup, requestPersistence } from './backup.js';
 import { refresh, onAlerts, net } from './quotes/index.js';
 import { renderAll, renderStatus, renderView, renderMarkets, rebalanceTable, ui } from './ui/render.js';
 import { modalMarkets } from './ui/markets-ui.js';
+import { modalWatchAdd, modalWatchEdit, watchBuy, watchDelete } from './ui/watch-ui.js';
 import { $, $$, toast, closeModal, modalOpen } from './ui/dom.js';
 import { applyAccent } from './ui/theme.js';
 import { initBackground } from './ui/background.js';
@@ -57,7 +58,7 @@ async function manualRefresh() {
   const misses = net.stocks?.fail || 0;
   if (net.crypto === false && !state.positions.some(p => p.kind === 'stock')) toast('Sem ligação às cotações de cripto', true);
   else if (misses) toast(`${misses} ${misses === 1 ? 'ação ficou' : 'ações ficaram'} sem cotação — vê o atalho nas Definições`, true);
-  else toast('Cotações atualizadas');
+  else if (!net.alerts) toast('Cotações atualizadas'); // não tapa o aviso de um alerta que disparou
 }
 
 const ACTIONS = {
@@ -67,6 +68,10 @@ const ACTIONS = {
   settings: modalSettings,
   refresh: manualRefresh,
   markets: modalMarkets,
+  'watch-add': () => modalWatchAdd(),
+  'watch-edit': modalWatchEdit,
+  'watch-buy': watchBuy,
+  'watch-del': watchDelete,
   'modal-close': closeModal,
   'go-positions': () => switchTab('posicoes'),
   reinforce: modalReinforce,
