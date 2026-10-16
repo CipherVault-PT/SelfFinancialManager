@@ -1,5 +1,5 @@
 // Service worker: rede primeiro (para receber sempre a versão nova) e cache como reserva offline.
-const CACHE = 'aurora-v17';
+const CACHE = 'aurora-v18';
 const SHELL = [
   './',
   './index.html',
@@ -38,12 +38,14 @@ const SHELL = [
   './js/quotes/stocks.js',
   './js/rebalance.js',
   './js/stocks.js',
+  './js/watchlist.js',
   './js/sync/crypto.js',
   './js/sync/engine.js',
   './js/tax.js',
   './js/store.js',
   './js/ui/background.js',
   './js/ui/cash-pick.js',
+  './js/ui/asset-search.js',
   './js/ui/dom.js',
   './js/ui/lock-screen.js',
   './js/ui/lot-form.js',
@@ -62,6 +64,7 @@ const SHELL = [
   './js/ui/modal-tax.js',
   './js/ui/render.js',
   './js/ui/theme.js',
+  './js/ui/watch-ui.js',
 ];
 
 self.addEventListener('install', e => {

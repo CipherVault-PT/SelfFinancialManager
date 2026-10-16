@@ -15,7 +15,7 @@ export const defaultCache = () => ({
 
 export const state = {
   version: SCHEMA_VERSION,
-  positions: [], closed: [], cash: [], dividends: [], alerts: [], history: [],
+  positions: [], closed: [], cash: [], dividends: [], alerts: [], history: [], watchlist: [],
   settings: defaultSettings(),
   cache: defaultCache(),
 };
@@ -43,7 +43,7 @@ export function load() {
   state.settings.createdAt ||= firstUse();
 }
 
-export const hasData = (s = state) => s.positions.length + s.closed.length + s.cash.length + (s.dividends?.length || 0) > 0;
+export const hasData = (s = state) => s.positions.length + s.closed.length + s.cash.length + (s.dividends?.length || 0) + (s.watchlist?.length || 0) > 0;
 
 const arr = v => (Array.isArray(v) ? v : []);
 const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
@@ -58,6 +58,7 @@ export function hydrate(d, { keepCache = false } = {}) {
   state.dividends = arr(d.dividends).map(normalizeDividend).filter(x => x.gross > 0 && x.date);
   state.alerts = arr(d.alerts).filter(a => a && a.posId && n(a.price) > 0);
   state.history = arr(d.history).filter(h => h && h.d && n(h.v) > 0).map(h => ({ d: String(h.d), v: n(h.v) }));
+  state.watchlist = arr(d.watchlist).map(normalizeWatch).filter(Boolean);
   state.settings = { ...defaultSettings(), ...obj(d.settings) };
   if (!keepCache) {
     const c = obj(d.cache);
@@ -104,6 +105,23 @@ function normalizeDividend(x) {
     platform: String(x.platform || ''), date: String(x.date || ''), currency: x.currency || 'EUR',
     gross: n(x.gross), withheld: Math.max(0, n(x.withheld)),
     ...(typeof x.src === 'string' && x.src ? { src: x.src } : {}),
+  };
+}
+
+/** Ativo da lista "A seguir": ação (símbolo Yahoo) ou cripto (id CoinGecko). */
+function normalizeWatch(w) {
+  if (!w || typeof w !== 'object' || !w.name) return null;
+  const kind = w.kind === 'crypto' ? 'crypto' : 'stock';
+  const key = kind === 'crypto' ? w.coingeckoId : w.quoteSymbol;
+  if (typeof key !== 'string' || !key) return null;
+  return {
+    id: String(w.id || uid()), kind, name: String(w.name), symbol: String(w.symbol || ''),
+    ...(kind === 'crypto'
+      ? { coingeckoId: key, thumb: String(w.thumb || ''), cur: w.cur === 'USD' ? 'USD' : 'EUR' }
+      : { quoteSymbol: key, quoteCur: w.quoteCur || null, exchange: String(w.exchange || '') }),
+    target: n(w.target) > 0 ? n(w.target) : null, above: !!w.above, notify: w.notify !== false, fired: !!w.fired,
+    note: String(w.note || ''), addedAt: String(w.addedAt || ''),
+    ...(n(w.addedPrice) > 0 ? { addedPrice: n(w.addedPrice), addedCur: w.addedCur || null } : {}),
   };
 }
 
@@ -157,7 +175,7 @@ export function importJSON(text) {
 
 export function wipe() {
   snapshotForUndo('wipe');
-  state.positions = []; state.closed = []; state.cash = []; state.dividends = []; state.alerts = []; state.history = [];
+  state.positions = []; state.closed = []; state.cash = []; state.dividends = []; state.alerts = []; state.history = []; state.watchlist = [];
   state.cache.prices = {}; state.cache.stockPrices = {}; state.cache.stockMiss = {};
 }
 

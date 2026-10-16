@@ -18,6 +18,7 @@ import { holdings, suggest } from '../rebalance.js';
 import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } from '../format.js';
 import { $, $$ } from './dom.js';
 import { marketStrip, extLine } from './markets-ui.js';
+import { viewWatch } from './watch-ui.js';
 
 const CLR = { crypto: 'var(--brass)', stock: 'var(--indigo)', cash: 'var(--slate)' };
 const platClass = p => PLATFORM_CLASS[p] ?? '';
@@ -56,7 +57,7 @@ function renderHero(a) {
 
 export function renderMarkets() {
   const el = $('#mkts');
-  el.innerHTML = marketStrip(state.positions);
+  el.innerHTML = marketStrip([...state.positions, ...state.watchlist]);
   el.hidden = !el.innerHTML;
 }
 
@@ -75,12 +76,13 @@ function renderTiles(a) {
 
 function renderCounts() {
   $('#cOpen').textContent = state.positions.length || '';
+  $('#cWatch').textContent = state.watchlist.length || '';
   $('#cClosed').textContent = state.closed.length || '';
 }
 
 export function renderView(a = agg()) {
   const v = $('#view');
-  v.innerHTML = ui.tab === 'posicoes' ? viewPositions() : ui.tab === 'historico' ? viewHistory() : viewDashboard(a);
+  v.innerHTML = ui.tab === 'posicoes' ? viewPositions() : ui.tab === 'seguir' ? viewWatch() : ui.tab === 'historico' ? viewHistory() : viewDashboard(a);
 }
 
 export function renderStatus() {
