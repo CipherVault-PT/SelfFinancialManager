@@ -1,7 +1,6 @@
 import { state } from '../store.js';
 import { conv, disp } from '../fx.js';
-import { qty, priceInfo } from '../calc.js';
-import { MARKETS, marketStatus, marketsHeld, extQuote } from '../markets.js';
+import { MARKETS, marketStatus, marketsHeld, extQuote, extRows, FUTURES, trackedIndex, futuresWanted, futuresTime, futureQuote } from '../markets.js';
 import { esc, money, price, pct, signed } from '../format.js';
 import { openModal } from './dom.js';
 
@@ -27,15 +26,45 @@ function statusText(st, now) {
 
 /** Quanto as tuas ações dos EUA mexem no pré/pós-mercado, na moeda de visualização. */
 export function extMove(now = Date.now()) {
-  let sum = 0, any = false;
-  for (const p of state.positions) {
-    if (p.kind !== 'stock') continue;
-    const e = extQuote(p.quoteSymbol, now), pi = priceInfo(p);
-    if (!e || !pi.live) continue;
-    sum += conv(qty(p) * (e.price - pi.price), pi.cur, disp());
-    any = true;
-  }
-  return any ? sum : null;
+  const rows = extRows(state.positions, now);
+  return rows.length ? rows.reduce((s, r) => s + r.effect, 0) : null;
+}
+
+const upDown = v => (v >= 0 ? 'up' : 'down');
+
+/** Futuros a mostrar agora: [{ id, name, q, etfs }] (ETFs teus que seguem esse índice). */
+function futuresNow(now) {
+  if (!futuresTime(now)) return [];
+  const items = [...state.positions, ...(state.watchlist ?? [])];
+  return futuresWanted(items).map(id => ({
+    id, name: FUTURES[id].name, q: futureQuote(id, now),
+    etfs: [...new Set(state.positions.filter(p => trackedIndex(p) === id).map(p => p.symbol))],
+  })).filter(f => f.q);
+}
+
+/** Painel "à Investing": as tuas ações dos EUA no pré/pós-mercado e os futuros dos índices dos teus ETFs. */
+export function extPanel(now = Date.now()) {
+  const st = marketStatus('us', now);
+  if (st.phase === 'open') return '';
+  const rows = extRows(state.positions, now), fut = futuresNow(now);
+  if (!rows.length && !fut.length) return '';
+  const d = disp(), total = rows.reduce((s, r) => s + r.effect, 0);
+  const phase = st.phase === 'pre' || st.phase === 'post' ? st.phase : rows[0]?.e.phase ?? 'post';
+  const label = phase === 'pre' ? '🌅 Pré-mercado dos EUA' : '🌙 Pós-mercado dos EUA';
+  const sub = st.phase === 'pre' ? `abre às ${hm(st.until)}` : st.phase === 'post' ? `até às ${hm(st.until)}` : `fechado · abre ${when(st.next?.open ?? now, now)}`;
+  const etfs = fut.flatMap(f => f.etfs);
+  return `<div class="extp" role="region" aria-label="${label}">
+    <div class="extp-h"><b>${label}</b><span class="muted">${esc(sub)}</span>
+      ${rows.length ? `<b class="mono extp-t ${upDown(total)}">${signed(total, money(total, d))}</b>` : ''}</div>
+    ${rows.map(r => `<div class="extp-r">
+      <span class="extp-n">${esc(r.p.name)}<small>${esc(r.p.symbol || '')}</small></span>
+      <span class="mono">${price(r.e.price, r.m.nativeCur)}</span>
+      <span class="mono ${upDown(r.e.pct)}">${pct(r.e.pct)}</span>
+      <span class="mono ${upDown(r.effect)}">${signed(r.effect, money(r.effect, d))}</span></div>`).join('')}
+    ${fut.length ? `<div class="extp-f">📈 Futuros ${fut.map(f => `${esc(f.name)} <b class="${upDown(f.q.dayPct)}">${pct(f.q.dayPct)}</b>`).join(' · ')}
+      <span class="muted">— ${etfs.length ? `indicam como podem abrir os teus ETFs (${esc(etfs.join(', '))})` : 'indicam como pode abrir o mercado'}</span></div>` : ''}
+    <div class="extp-note">Fora do horário normal há menos volume e os preços mexem mais. O valor da carteira conta com o preço do horário normal.</div>
+  </div>`;
 }
 
 /** Faixa com o estado das bolsas das tuas ações (e das que segues). */
@@ -54,10 +83,15 @@ export function marketStrip(items, now = Date.now()) {
   }).join('');
 }
 
-/** Linha do pré/pós-mercado num cartão de ação dos EUA. */
+/** Linha do pré/pós-mercado num cartão de ação dos EUA (ou dos futuros, num ETF europeu do S&P 500 / Nasdaq 100). */
 export function extLine(p, m) {
   const e = p.kind === 'stock' ? extQuote(p.quoteSymbol) : null;
-  if (!e || !m.live) return '';
+  if (!e) {
+    const idx = trackedIndex(p), f = idx && futuresTime() ? futureQuote(idx) : null;
+    return f ? `<div class="extline">📈 Futuros ${esc(FUTURES[idx].name)} <span class="${upDown(f.dayPct)}">${pct(f.dayPct)}</span>
+      <span class="muted">· indicação antes da abertura dos EUA</span></div>` : '';
+  }
+  if (!m.live) return '';
   const delta = conv(m.u * (e.price - m.nativePrice), m.nativeCur, p.currency);
   return `<div class="extline">${e.phase === 'pre' ? '🌅 Pré-mercado' : '🌙 Pós-mercado'}
     <b class="mono">${price(e.price, m.nativeCur)}</b> <span class="${e.pct >= 0 ? 'up' : 'down'}">${pct(e.pct)}</span>

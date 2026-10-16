@@ -600,3 +600,17 @@ a.btn{text-decoration:none}
 .jlv{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px;font-size:12.5px;color:var(--muted)}
 .jlv b{color:var(--text);font-weight:500}
 .jline .jthesis + .jlv{margin-top:6px}
+
+/* ---------- painel de pré/pós-mercado ---------- */
+.extp{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;margin-bottom:18px}
+.extp-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:14px}
+.extp-h .muted{font-size:12px}
+.extp-t{margin-left:auto;font-size:14px}
+.extp-r{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+.extp-r .mono{text-align:right;min-width:62px}
+.extp-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.extp-n small{color:var(--muted-2);margin-left:6px;font-family:var(--mono);font-size:11px}
+.extp-f{padding-top:8px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.extp-f b{font-weight:600}
+.extp-note{margin-top:8px;font-size:11px;color:var(--muted-2)}
+@media(max-width:480px){.extp-r{grid-template-columns:1fr auto auto;row-gap:2px}.extp-n{grid-column:1/-1}}
