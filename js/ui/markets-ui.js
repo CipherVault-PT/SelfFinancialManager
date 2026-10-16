@@ -1,6 +1,6 @@
 import { state } from '../store.js';
 import { conv, disp } from '../fx.js';
-import { MARKETS, marketStatus, marketsHeld, extQuote, extRows, FUTURES, trackedIndex, futuresWanted, futuresTime, futureQuote, marketOf } from '../markets.js';
+import { MARKETS, marketStatus, marketsHeld, extQuote, extRows, FUTURES, trackedIndex, futuresWanted, futuresTime, futureQuote, marketOf, notToday } from '../markets.js';
 import { esc, money, price, pct, signed } from '../format.js';
 import { openModal } from './dom.js';
 
@@ -66,6 +66,18 @@ export function extPanel(now = Date.now()) {
       <span class="muted">— ${etfs.length ? `indicam como podem abrir os teus ETFs (${esc(etfs.join(', '))})` : 'indicam como pode abrir o mercado'}</span></div>` : ''}
     <div class="extp-note">Fora do horário normal há menos volume e os preços mexem mais. O valor da carteira conta com o preço do horário normal.</div>
   </div>`;
+}
+
+/** Nota ao lado do "Hoje": que bolsas ainda não contam e quando abrem. */
+export function todayNote(now = Date.now()) {
+  const list = notToday(state.positions, now);
+  if (!list.length) return '';
+  const name = x => MARKETS[x.id].name;
+  const parts = list.map(x => `${name(x)} (${x.open ? hm(x.open) : 'fechada'})`);
+  const txt = list.every(x => !x.open) ? 'Bolsas fechadas hoje'
+    : list.length === 1 ? `“Hoje” ainda sem ${name(list[0])} — abre às ${hm(list[0].open)}`
+      : `“Hoje” ainda sem ${parts.slice(0, -1).join(', ')} e ${parts.at(-1)}`;
+  return `<span class="hnote" title="O “Hoje” só conta o que já mexeu hoje. Até a bolsa abrir, os cartões dessas ações mostram a variação da última sessão.">⏳ ${esc(txt)}</span>`;
 }
 
 /** Faixa com o estado das bolsas das tuas ações (e das que segues). */

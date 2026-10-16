@@ -102,6 +102,7 @@ header{position:sticky;top:0;z-index:40;width:100%;
 .chg.gain{background:var(--up-dim);color:var(--up)} .chg.loss{background:var(--down-dim);color:var(--down)}
 .chg .lbl{font-family:var(--body);color:var(--muted);font-weight:450;font-size:12.5px}
 .arw{font-size:12px}
+.hnote{font-size:12px;color:var(--muted);flex-basis:100%;margin-top:-4px}
 
 /* ribbon */
 .ribbon{margin-top:26px;height:14px;border-radius:8px;overflow:hidden;display:flex;gap:2px;
@@ -415,6 +416,14 @@ button.lnk{background:none;border:0;padding:0;font:inherit;float:none;color:var(
 /* --- v2.3: dividendos --- */
 .divline{margin-top:10px;font-size:12.5px;color:var(--muted);font-family:var(--mono)}
 .divline b{font-weight:500}
+.fx-tot{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
+.fx-tot div{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:15px}
+.fx-tot span{font-family:var(--body);font-size:12px;color:var(--muted)}
+.fx-tot b{font-weight:500}
+.fx-g{padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px;font-size:13px}
+.fx-n small{color:var(--muted);font-size:12px}
+.fx-r{font-family:var(--mono);font-size:12.5px;color:var(--muted)} .fx-r b{font-weight:500}
+.fx-rate{font-size:12.5px;color:var(--muted);line-height:1.5} .fx-rate b{color:var(--text);font-weight:500}
 .sh-r{display:flex;gap:8px;align-items:center}
 .hrow.drow{grid-template-columns:1.6fr 1fr 1fr 1fr 30px}
 @media(max-width:640px){.hrow.drow{min-width:520px}}

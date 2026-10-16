@@ -7,6 +7,7 @@ import { fetchCryptoPrices } from './crypto.js';
 import { fetchStockQuotes, fetchFutures } from './stocks.js';
 import { ensureBenchmark, firstBuyDate } from '../performance.js';
 import { ensureInflation } from '../inflation.js';
+import { ensureLotFx } from '../fxeffect.js';
 
 /** Estado das últimas atualizações (não é guardado). */
 export const net = { busy: 0, manual: false, fx: null, crypto: null, stocks: null, alerts: 0 };
@@ -30,7 +31,10 @@ export async function refresh({ crypto = true, stocks = true, force = false } = 
     ]);
     if (c !== null) net.crypto = c;
     if (s !== null) net.stocks = s;
-    if (stocks) await fetchFutures().catch(() => 0);
+    if (stocks) {
+      await fetchFutures().catch(() => 0);
+      ensureLotFx().then(changed => changed && commit(), () => {});
+    }
     recordHistory();
     const fired = [...checkAlerts(), ...checkWatch()];
     net.alerts = fired.length;

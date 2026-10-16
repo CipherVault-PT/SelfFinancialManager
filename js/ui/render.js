@@ -17,7 +17,9 @@ import { monthsToGoal, addMonths, fourPercentMonthly, DEFAULT_RATE } from '../go
 import { holdings, suggest } from '../rebalance.js';
 import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } from '../format.js';
 import { $, $$ } from './dom.js';
-import { marketStrip, extLine, extPanel } from './markets-ui.js';
+import { marketStrip, extLine, extPanel, todayNote } from './markets-ui.js';
+import { dayWord } from '../markets.js';
+import { fxSplit, fxSummary } from '../fxeffect.js';
 import { viewWatch } from './watch-ui.js';
 import { journalLine, journalSection } from './modal-journal.js';
 
@@ -45,7 +47,7 @@ function renderHero(a) {
 
   $('#heroSub').innerHTML = state.positions.length
     ? `<span class="chg ${a.dayChange >= 0 ? 'gain' : 'loss'}"><span class="arw">${a.dayChange >= 0 ? '▲' : '▼'}</span><span class="lbl">Hoje</span> ${signed(a.dayChange, money(a.dayChange, d))} <span>(${pct(a.dayP)})</span></span>
-       <span class="chg ${a.unreal >= 0 ? 'gain' : 'loss'}" style="background:transparent"><span class="lbl">Não realizado</span> ${signed(a.unreal, money(a.unreal, d))} <span>(${pct(a.unrealP)})</span></span>`
+       <span class="chg ${a.unreal >= 0 ? 'gain' : 'loss'}" style="background:transparent"><span class="lbl">Não realizado</span> ${signed(a.unreal, money(a.unreal, d))} <span>(${pct(a.unrealP)})</span></span>${todayNote()}`
     : `<span class="chg" style="background:var(--surface-2);color:var(--muted)"><span class="lbl">Sem posições abertas — adiciona a primeira</span></span>`;
 
   const tot = a.cryptoV + a.stockV + a.cashV;
@@ -151,7 +153,7 @@ function positionCard(p) {
       <div class="pos-r">
         <div class="pl ${plc}">${signed(m.plPos, money(m.plPos, p.currency))}</div>
         <div class="plp ${plc}">${pct(m.plp)}</div>
-        ${m.dayPct != null ? `<div class="day ${upDown(m.dayPct)}">hoje ${pct(m.dayPct)}</div>` : ''}
+        ${m.dayPct != null ? `<div class="day ${upDown(m.dayPct)}">${dayWord(m.dayAt)} ${pct(m.dayPct)}</div>` : ''}
       </div>
     </div>
     <div class="pos-grid">
@@ -160,6 +162,7 @@ function positionCard(p) {
       <div class="pg"><span class="gk">Cotação ${esc(m.nativeCur)}</span><span class="gv">${price(m.nativePrice, m.nativeCur)}</span></div>
     </div>
     ${extLine(p, m)}
+    ${isStock ? fxLine(p) : ''}
     ${journalLine(p, m)}
     ${divNet ? `<div class="divline">💰 Dividendos <b class="up">${signed(divNet, money(divNet, p.currency))}</b> · retorno total <b class="${upDown(totalRet)}">${pct(totalRet)}</b></div>` : ''}
     ${lotsHtml}
@@ -254,7 +257,42 @@ function viewDashboard(a) {
   return `${backupBanner()}${plansBanner()}${historyChart()}${performanceSection(d)}${goalSection(a, d)}${stats}<div class="two">
     <div><div class="sh"><h3>Por plataforma</h3><span class="hint">valor atual</span></div><div class="bd">${platRows}</div></div>
     <div><div class="sh"><h3>Por ativo</h3><span class="hint">peso · rendimento</span></div><div class="bd">${assetRows}</div></div>
-  </div>${allocationSection(d)}${rebalanceSection(d)}`;
+  </div>${allocationSection(d)}${fxSection(d)}${rebalanceSection(d)}`;
+}
+
+const FX_TIP = 'Ação: quanto a ação subiu ou desceu na moeda dela, ao câmbio de hoje. Câmbio: o que ganhaste ou perdeste por a moeda mudar desde as compras, mais as taxas de conversão.';
+const amt = (v, cur) => `<b class="${upDown(v)}">${signed(v, money(v, cur))}</b>`;
+const rateTxt = (r, ac, qc) => `1 ${esc(sym(ac))} = ${(1 / r).toFixed(4).replace('.', ',')} ${esc(sym(qc))}`;
+const CUR_NAME = { USD: 'Dólar', GBP: 'Libra', CHF: 'Franco suíço', DKK: 'Coroa dinamarquesa', SEK: 'Coroa sueca', NOK: 'Coroa norueguesa', JPY: 'Iene', CAD: 'Dólar canadiano', EUR: 'Euro' };
+const FEM = new Set(['GBP', 'DKK', 'SEK', 'NOK']);
+const curWord = c => (CUR_NAME[c] ?? c).toLowerCase();
+
+/** Num cartão de ação noutra moeda: quanto do resultado vem da ação e quanto vem do câmbio. */
+function fxLine(p) {
+  const s = fxSplit(p);
+  if (!s || s.missing) return '';
+  return `<div class="divline fxline" title="${esc(FX_TIP)}">💱 Ação ${amt(s.price, p.currency)} · câmbio ${amt(s.fx, p.currency)}${s.approx ? ' <span title="Calculado com o câmbio do BCE no dia de cada compra">≈</span>' : ''}</div>`;
+}
+
+function fxSection(d) {
+  const fs = fxSummary(state.positions, d);
+  if (!fs.groups.length) return '';
+  const rows = fs.groups.map(g => {
+    const name = CUR_NAME[g.qc] ?? g.qc;
+    return `<div class="fx-g"><div class="fx-n"><b>${esc(name)}</b> <small>${plural(g.n, 'posição', 'posições')}${g.approx ? ' · <span title="Algumas compras sem preço em moeda estrangeira: usado o câmbio do BCE nesse dia">≈</span>' : ''}</small></div>
+      <div class="fx-r">Ação ${amt(g.price, d)} · câmbio ${amt(g.fx, d)}</div>
+      <div class="fx-rate">Compraste a <b class="mono">${rateTxt(g.r0, g.ac, g.qc)}</b> (média, com taxas) · hoje <b class="mono">${rateTxt(g.r1, g.ac, g.qc)}</b>
+        — ${FEM.has(g.qc) ? 'a' : 'o'} ${esc(curWord(g.qc))} ${g.move >= 0 ? 'valorizou' : 'desvalorizou'} <span class="${upDown(g.move)}">${Math.abs(g.move).toFixed(2).replace('.', ',')}%</span> face ${FEM.has(g.ac) ? 'à' : 'ao'} ${esc(curWord(g.ac))}</div></div>`;
+  }).join('');
+  const notes = [
+    'O efeito do câmbio inclui as taxas de conversão da corretora (na compra e na venda).',
+    fs.missing && `${plural(fs.missing, 'posição fica', 'posições ficam')} de fora: falta o preço na moeda da ação ou o câmbio do dia da compra (vem do BCE, se a compra tiver data).`,
+  ].filter(Boolean);
+  return `<div class="sh"><h3>Efeito do câmbio</h3><span class="hint">ações noutra moeda</span></div>
+    <div class="bd fxs" title="${esc(FX_TIP)}">
+      <div class="fx-tot"><div><span>A ação</span>${amt(fs.price, d)}</div><div><span>O câmbio</span>${amt(fs.fx, d)}</div><div><span>Total</span>${amt(fs.price + fs.fx, d)}</div></div>
+      ${rows}
+      <div class="alloc-notes">${notes.map(n => `<div>${n}</div>`).join('')}</div></div>`;
 }
 
 const ALLOC_DIMS = [['sector', 'Setor'], ['country', 'País'], ['currency', 'Moeda']];

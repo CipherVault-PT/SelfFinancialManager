@@ -1,6 +1,7 @@
 import { NO_FX_FEE } from './config.js';
 import { state } from './store.js';
 import { conv, canConvert, fxFresh, disp } from './fx.js';
+import { dayMoveAt, sameDay } from './markets.js';
 
 const finiteOr = (v, d = null) => (Number.isFinite(v) ? v : d);
 
@@ -65,9 +66,12 @@ export function metrics(p, cur = disp()) {
   const plp = cost > 0 ? (plPos / cost) * 100 : 0;
   const invD = conv(cost, p.currency, cur), valD = conv(valPos, p.currency, cur), plD = valD - invD;
   const dayD = pi.dayPct != null ? valD - valD / (1 + pi.dayPct / 100) : 0;
+  // antes de a bolsa abrir, a variação é a da sessão anterior: fica fora do "Hoje"
+  const dayAt = pi.dayPct == null ? null : p.kind === 'stock' ? dayMoveAt(p.quoteSymbol) : pi.ts || Date.now();
   return {
     u, cost, avg: pAvg(p), live: pi.live, ts: pi.ts, nativePrice: pi.price, nativeCur: pi.cur,
-    valPos, plPos, plp, invD, valD, plD, dayPct: pi.dayPct, dayD,
+    valPos, plPos, plp, invD, valD, plD, dayPct: pi.dayPct, dayD, dayAt,
+    dayToday: dayAt != null && sameDay(dayAt, Date.now()),
   };
 }
 
@@ -91,7 +95,8 @@ export function agg(cur = disp()) {
   let inv = 0, val = 0, cryptoV = 0, stockV = 0, dayChange = 0;
   for (const p of state.positions) {
     const m = metrics(p, cur);
-    inv += m.invD; val += m.valD; dayChange += m.dayD;
+    inv += m.invD; val += m.valD;
+    if (m.dayToday) dayChange += m.dayD;
     if (p.kind === 'crypto') cryptoV += m.valD; else stockV += m.valD;
   }
   let cashV = 0;

@@ -2,7 +2,7 @@ import { state, commit } from '../store.js';
 import { quoteFor } from '../quotes/stocks.js';
 import { refresh } from '../quotes/index.js';
 import { watchQuote, addWatch, updateWatch, removeWatch, toTarget, reached, sinceAdded } from '../watchlist.js';
-import { extQuote, marketOf, marketStatus } from '../markets.js';
+import { extQuote, marketOf, marketStatus, dayMoveAt, dayWord } from '../markets.js';
 import { esc, price, pct, sym, num, inputNum } from '../format.js';
 import { $, toast, openModal, closeModal, segmented } from './dom.js';
 import { coinSearch, stockSearch } from './asset-search.js';
@@ -38,7 +38,7 @@ function watchRow(w) {
       <div style="min-width:0"><div class="nm">${esc(w.name)}</div><div class="sub">${sub}</div></div>
       <div class="pos-r">
         <div class="pl mono">${q.price > 0 ? price(q.price, q.cur) : '—'}</div>
-        ${q.dayPct != null ? `<div class="day ${q.dayPct >= 0 ? 'up' : 'down'}">hoje ${pct(q.dayPct)}</div>` : `<div class="day muted">${q.live ? '' : 'sem cotação'}</div>`}
+        ${q.dayPct != null ? `<div class="day ${q.dayPct >= 0 ? 'up' : 'down'}">${dayWord(q.at)} ${pct(q.dayPct)}</div>` : `<div class="day muted">${q.live ? '' : 'sem cotação'}</div>`}
       </div>
     </div>
     ${ext ? `<div class="extline">${ext.phase === 'pre' ? '🌅 Pré-mercado' : '🌙 Pós-mercado'} <b class="mono">${price(ext.price, q.cur)}</b> <span class="${ext.pct >= 0 ? 'up' : 'down'}">${pct(ext.pct)}</span></div>` : ''}
@@ -139,7 +139,7 @@ export function modalWatchAdd() {
       $('#wCur').textContent = `${sym(q.cur)} · opcional`;
     }
     const el = $('#wQuote');
-    if (el) el.innerHTML = q ? `Agora: <b>${price(q.price, q.cur)}</b>${q.dayPct != null ? ` · hoje ${pct(q.dayPct)}` : ''}` : 'Sem cotação agora — aparece quando o Yahoo responder.';
+    if (el) el.innerHTML = q ? `Agora: <b>${price(q.price, q.cur)}</b>${q.dayPct != null ? ` · ${dayWord(dayMoveAt(y))} ${pct(q.dayPct)}` : ''}` : 'Sem cotação agora — aparece quando o Yahoo responder.';
   }
 
   segmented($('#wKind'), 'k', k => { draft.kind = k; draft.pick = null; draft.quote = null; draft.token++; renderAsset(); });
@@ -166,7 +166,7 @@ export function modalWatchEdit(id) {
   if (!w) return;
   const q = watchQuote(w);
   openModal(`<div class="mh"><h3>${esc(w.name)}</h3><button type="button" class="x" data-action="modal-close" aria-label="Fechar">✕</button></div>
-    <p class="mlead">Agora: <b>${q.price > 0 ? price(q.price, q.cur) : '—'}</b>${q.dayPct != null ? ` · hoje ${pct(q.dayPct)}` : ''}${w.fired ? ' · <span class="up">o aviso já disparou — guarda para o voltar a ligar</span>' : ''}</p>
+    <p class="mlead">Agora: <b>${q.price > 0 ? price(q.price, q.cur) : '—'}</b>${q.dayPct != null ? ` · ${dayWord(q.at)} ${pct(q.dayPct)}` : ''}${w.fired ? ' · <span class="up">o aviso já disparou — guarda para o voltar a ligar</span>' : ''}</p>
     ${targetFields(w, q.cur || w.quoteCur || w.cur)}
     <button type="button" class="btn pri wide" id="wSave" style="margin-top:14px">Guardar</button>`);
   segmented($('#wDir'), 'd', () => {});

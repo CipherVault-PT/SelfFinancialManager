@@ -69,6 +69,9 @@ export async function viaProxies(url, accept, parse, { publicFallback = true } =
   return null;
 }
 
+/** Hora do último negócio no horário normal (`mt`, em ms), se vier na resposta. */
+const seconds = v => (Number.isFinite(v) && v > 0 ? { mt: v * 1000 } : {});
+
 export function parseYahooChart(d, y = null) {
   const m = d?.chart?.result?.[0]?.meta;
   if (!m || !(m.regularMarketPrice > 0)) return null;
@@ -85,6 +88,7 @@ export function parseYahooChart(d, y = null) {
     price, cur,
     dayPct: prev > 0 ? ((price - prev) / prev) * 100 : null,
     name: typeof (m.longName ?? m.shortName) === 'string' ? (m.longName ?? m.shortName) : null,
+    ...seconds(m.regularMarketTime),
     ...(ext ? { ext } : {}),
   };
 }
@@ -95,7 +99,7 @@ export function parseTwelveData(d) {
   if (SUBUNITS[cur]) { price /= SUBUNITS[cur][1]; cur = SUBUNITS[cur][0]; }
   if (!(price > 0) || !isCurrency(cur)) return null;
   const pc = parseFloat(d.percent_change);
-  return { price, cur, dayPct: Number.isFinite(pc) ? pc : null, name: typeof d.name === 'string' ? d.name : null, src: 'twelvedata' };
+  return { price, cur, dayPct: Number.isFinite(pc) ? pc : null, name: typeof d.name === 'string' ? d.name : null, ...seconds(+d.last_quote_at), src: 'twelvedata' };
 }
 
 export const yahooQuote = async (y, ext = false) => {

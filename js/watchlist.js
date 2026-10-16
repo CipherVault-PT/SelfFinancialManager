@@ -1,20 +1,21 @@
 import { state, uid } from './store.js';
 import { canConvert, conv } from './fx.js';
 import { todayISO } from './format.js';
+import { dayMoveAt } from './markets.js';
 
 const finite = v => (Number.isFinite(v) ? v : null);
 
-/** Preço atual de um ativo da lista: { price, cur, dayPct, live, ts }. */
+/** Preço atual de um ativo da lista: { price, cur, dayPct, live, ts, at } (`at`: quando foi a variação do dia). */
 export function watchQuote(w) {
   if (w.kind === 'crypto') {
     const q = state.cache.prices[w.coingeckoId], k = String(w.cur || 'EUR').toLowerCase();
-    if (q?.[k] > 0) return { price: q[k], cur: w.cur, dayPct: finite(q[`${k}_24h_change`]), live: true, ts: q.ts };
-    if (q?.usd > 0 && canConvert(w.cur)) return { price: conv(q.usd, 'USD', w.cur), cur: w.cur, dayPct: finite(q.usd_24h_change), live: true, ts: q.ts };
+    if (q?.[k] > 0) return { price: q[k], cur: w.cur, dayPct: finite(q[`${k}_24h_change`]), live: true, ts: q.ts, at: q.ts };
+    if (q?.usd > 0 && canConvert(w.cur)) return { price: conv(q.usd, 'USD', w.cur), cur: w.cur, dayPct: finite(q.usd_24h_change), live: true, ts: q.ts, at: q.ts };
     return { price: null, cur: w.cur, dayPct: null, live: false, ts: null };
   }
   const q = state.cache.stockPrices[w.quoteSymbol];
   return q?.price > 0
-    ? { price: q.price, cur: q.cur, dayPct: finite(q.dayPct), live: true, ts: q.ts }
+    ? { price: q.price, cur: q.cur, dayPct: finite(q.dayPct), live: true, ts: q.ts, at: dayMoveAt(w.quoteSymbol, q) }
     : { price: null, cur: w.quoteCur || null, dayPct: null, live: false, ts: null };
 }
 
