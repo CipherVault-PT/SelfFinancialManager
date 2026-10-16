@@ -3,8 +3,10 @@ import { state } from '../store.js';
 import { fetchJSON, pool } from '../net.js';
 import { isCurrency } from '../format.js';
 import { micOf, twelveDataSymbol } from '../stocks.js';
+import { marketOf, marketStatus, noteSession, extFromChart } from '../markets.js';
 
-const yahooChartUrl = y => `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?interval=1d&range=1d`;
+/** Com `ext`, pede o dia em intervalos de 5 min com o pré e o pós-mercado (ações dos EUA fora do horário normal). */
+const yahooChartUrl = (y, ext = false) => `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?${ext ? 'interval=5m&range=1d&includePrePost=true' : 'interval=1d&range=1d'}`;
 const yahooSearchUrl = q => `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=10&newsCount=0&listsCount=0`;
 
 /** Intermediários públicos com CORS (gratuitos, por vezes instáveis). O Yahoo não permite pedidos diretos do browser. */
@@ -51,19 +53,23 @@ export async function viaProxies(url, accept, parse) {
   return null;
 }
 
-export function parseYahooChart(d) {
+export function parseYahooChart(d, y = null) {
   const m = d?.chart?.result?.[0]?.meta;
   if (!m || !(m.regularMarketPrice > 0)) return null;
-  let price = m.regularMarketPrice, prev = m.previousClose ?? m.chartPreviousClose, cur = m.currency;
+  let price = m.regularMarketPrice, prev = m.previousClose ?? m.chartPreviousClose, cur = m.currency, div = 1;
   if (SUBUNITS[cur]) {
-    const [main, div] = SUBUNITS[cur];
-    price /= div; prev = prev > 0 ? prev / div : prev; cur = main;
+    [cur, div] = SUBUNITS[cur];
+    price /= div; prev = prev > 0 ? prev / div : prev;
   }
   if (!isCurrency(cur)) return null;
+  const market = marketOf(y);
+  if (market) noteSession(market, m);
+  const ext = market === 'us' ? extFromChart(d, price, div) : null;
   return {
     price, cur,
     dayPct: prev > 0 ? ((price - prev) / prev) * 100 : null,
     name: typeof (m.longName ?? m.shortName) === 'string' ? (m.longName ?? m.shortName) : null,
+    ...(ext ? { ext } : {}),
   };
 }
 
@@ -76,8 +82,8 @@ export function parseTwelveData(d) {
   return { price, cur, dayPct: Number.isFinite(pc) ? pc : null, name: typeof d.name === 'string' ? d.name : null };
 }
 
-export const yahooQuote = y =>
-  viaProxies(yahooChartUrl(y), d => d && typeof d === 'object' && 'chart' in d, parseYahooChart);
+export const yahooQuote = (y, ext = false) =>
+  viaProxies(yahooChartUrl(y, ext), d => d && typeof d === 'object' && 'chart' in d, d => parseYahooChart(d, y));
 
 export async function twelveDataQuote(y, key) {
   const mic = micOf(y);
@@ -85,9 +91,12 @@ export async function twelveDataQuote(y, key) {
   try { return parseTwelveData(await fetchJSON(url, { timeout: 9000 })); } catch { return null; }
 }
 
+/** Fora do horário normal dos EUA vale a pena pedir o pré/pós-mercado. */
+const wantsExt = y => marketOf(y) === 'us' && marketStatus('us').phase !== 'open';
+
 /** Cotação de um símbolo: Yahoo (via intermediário) e, como reserva, Twelve Data se houver chave. */
 export async function quoteFor(y) {
-  const q = await yahooQuote(y);
+  const q = await yahooQuote(y, wantsExt(y));
   if (q) return q;
   const key = (state.settings.apiKey || '').trim();
   return key ? twelveDataQuote(y, key) : null;

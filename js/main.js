@@ -2,7 +2,8 @@ import { REFRESH, STORAGE_KEY } from './config.js';
 import { state, load, save, subscribe, commit, hasData } from './store.js';
 import { snoozeBackup, requestPersistence } from './backup.js';
 import { refresh, onAlerts, net } from './quotes/index.js';
-import { renderAll, renderStatus, renderView, rebalanceTable, ui } from './ui/render.js';
+import { renderAll, renderStatus, renderView, renderMarkets, rebalanceTable, ui } from './ui/render.js';
+import { modalMarkets } from './ui/markets-ui.js';
 import { $, $$, toast, closeModal, modalOpen } from './ui/dom.js';
 import { applyAccent } from './ui/theme.js';
 import { initBackground } from './ui/background.js';
@@ -65,6 +66,7 @@ const ACTIONS = {
   import: () => modalImport(),
   settings: modalSettings,
   refresh: manualRefresh,
+  markets: modalMarkets,
   'modal-close': closeModal,
   'go-positions': () => switchTab('posicoes'),
   reinforce: modalReinforce,
@@ -168,6 +170,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 setInterval(renderStatus, 30_000);
+setInterval(() => { if (!document.hidden) renderMarkets(); }, 60_000);
 schedule();
 refresh();
 initSync({

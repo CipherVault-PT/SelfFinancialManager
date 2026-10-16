@@ -548,3 +548,29 @@ a.btn{text-decoration:none}
 .guide-alt[open] summary{color:var(--text)}
 .sync-opt{display:flex;flex-direction:column;gap:2px;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13.5px}
 .sync-opt span{color:var(--muted);font-size:12.5px}
+
+/* ---------- estado das bolsas ---------- */
+.mkts{display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 18px}
+.mk{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);
+  background:var(--surface);color:var(--text);font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.mk:hover{border-color:var(--line-2)}
+.mk b{font-weight:600}
+.mk-f{font-size:13px}
+.mk-dot{width:7px;height:7px;border-radius:50%;background:var(--slate);flex:none;display:inline-block}
+.mk-dot.open{background:var(--up);box-shadow:0 0 0 3px color-mix(in srgb,var(--up) 22%,transparent)}
+.mk-dot.pre{background:var(--brass)}
+.mk-dot.post{background:var(--indigo)}
+.mk-st{color:var(--muted)}
+.mk-t{color:var(--muted-2)}
+.mk-x{font-family:var(--mono);font-weight:500}
+.extline{margin-top:10px;padding:7px 10px;border-radius:10px;background:var(--surface-2);font-size:12.5px;color:var(--muted)}
+.extline b{color:var(--text);font-weight:500}
+.mk-tbl{display:flex;flex-direction:column;gap:6px;margin:4px 0 14px}
+.mk-row{display:grid;grid-template-columns:1.3fr 1fr .9fr;gap:10px;align-items:center;padding:9px 11px;border-radius:12px;
+  background:var(--bg-2);border:1px solid var(--line);font-size:13px}
+.mk-row.held{border-color:rgba(var(--accent-rgb),.35)}
+.mk-n small,.mk-s small{display:block;color:var(--muted-2);font-size:11px;margin-top:2px}
+.mk-ext{font-size:11px;color:var(--muted-2);margin-top:2px}
+.mk-s{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.mk-s small{flex-basis:100%}
+@media(max-width:520px){.mk-row{grid-template-columns:1fr 1fr}.mk-n{grid-column:1/-1}}
