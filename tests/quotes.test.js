@@ -19,7 +19,7 @@ test('Yahoo/Twelve Data: rejeitam moedas inválidas e respostas de erro', () => 
   assert.equal(parseYahooChart(chart({ regularMarketPrice: 10, currency: '<img src=x>' })), null);
   assert.equal(parseYahooChart({ chart: { result: null, error: { code: 'Not Found' } } }), null);
   assert.equal(parseTwelveData({ status: 'error', code: 404 }), null);
-  assert.deepEqual(parseTwelveData({ close: '12.5', currency: 'EUR', percent_change: '-1.2', name: 'X' }), { price: 12.5, cur: 'EUR', dayPct: -1.2, name: 'X' });
+  assert.deepEqual(parseTwelveData({ close: '12.5', currency: 'EUR', percent_change: '-1.2', name: 'X' }), { price: 12.5, cur: 'EUR', dayPct: -1.2, name: 'X', src: 'twelvedata' });
 });
 
 test('câmbio: aceita só taxas válidas', async () => {

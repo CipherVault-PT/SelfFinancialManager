@@ -5,8 +5,19 @@ import { isCurrency } from '../format.js';
 import { micOf, twelveDataSymbol } from '../stocks.js';
 import { marketOf, marketStatus, noteSession, extFromChart, FUTURES, futuresWanted, futuresTime } from '../markets.js';
 
-/** Com `ext`, pede o dia em intervalos de 5 min com o pré e o pós-mercado (ações dos EUA fora do horário normal). */
-const yahooChartUrl = (y, ext = false) => `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?${ext ? 'interval=5m&range=1d&includePrePost=true' : 'interval=1d&range=1d'}`;
+const EXT_WINDOW = 18 * 3600;
+
+/**
+ * Com `ext`, pede as últimas 18 h em intervalos de 5 min com o pré e o pós-mercado (ações dos EUA fora do
+ * horário normal). Uma janela explícita e não `range=1d`: antes da abertura o "dia" do Yahoo ainda pode ser
+ * o de ontem e o pré-mercado de hoje ficava de fora. Arredondada ao minuto para aproveitar a cache.
+ */
+export function yahooChartUrl(y, ext = false, now = Date.now()) {
+  const base = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?`;
+  if (!ext) return `${base}interval=1d&range=1d`;
+  const p2 = Math.ceil(now / 60_000) * 60;
+  return `${base}interval=5m&period1=${p2 - EXT_WINDOW}&period2=${p2}&includePrePost=true`;
+}
 /** Últimos dias em intervalos de 1 h com o pós-mercado: dá o fecho do pós-mercado de ontem. */
 const yahooPostUrl = y => `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?interval=1h&range=5d&includePrePost=true`;
 const yahooSearchUrl = q => `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=10&newsCount=0&listsCount=0`;
@@ -81,11 +92,13 @@ export function parseTwelveData(d) {
   if (SUBUNITS[cur]) { price /= SUBUNITS[cur][1]; cur = SUBUNITS[cur][0]; }
   if (!(price > 0) || !isCurrency(cur)) return null;
   const pc = parseFloat(d.percent_change);
-  return { price, cur, dayPct: Number.isFinite(pc) ? pc : null, name: typeof d.name === 'string' ? d.name : null };
+  return { price, cur, dayPct: Number.isFinite(pc) ? pc : null, name: typeof d.name === 'string' ? d.name : null, src: 'twelvedata' };
 }
 
-export const yahooQuote = (y, ext = false) =>
-  viaProxies(yahooChartUrl(y, ext), d => d && typeof d === 'object' && 'chart' in d, d => parseYahooChart(d, y));
+export const yahooQuote = async (y, ext = false) => {
+  const q = await viaProxies(yahooChartUrl(y, ext), d => d && typeof d === 'object' && 'chart' in d, d => parseYahooChart(d, y));
+  return q && { ...q, src: 'yahoo' };
+};
 
 export async function twelveDataQuote(y, key) {
   const mic = micOf(y);
