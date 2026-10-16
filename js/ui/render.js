@@ -17,7 +17,7 @@ import { monthsToGoal, addMonths, fourPercentMonthly, DEFAULT_RATE } from '../go
 import { holdings, suggest } from '../rebalance.js';
 import { esc, money, moneyParts, price, pct, signed, units, ago, sym, plural } from '../format.js';
 import { $, $$ } from './dom.js';
-import { marketStrip, extLine } from './markets-ui.js';
+import { marketStrip, extLine, extPanel } from './markets-ui.js';
 import { viewWatch } from './watch-ui.js';
 import { journalLine, journalSection } from './modal-journal.js';
 
@@ -57,9 +57,11 @@ function renderHero(a) {
 }
 
 export function renderMarkets() {
-  const el = $('#mkts');
-  el.innerHTML = marketStrip([...state.positions, ...state.watchlist]);
-  el.hidden = !el.innerHTML;
+  for (const [id, html] of [['#mkts', marketStrip([...state.positions, ...state.watchlist])], ['#extp', extPanel()]]) {
+    const el = $(id);
+    el.innerHTML = html;
+    el.hidden = !html;
+  }
 }
 
 function renderTiles(a) {

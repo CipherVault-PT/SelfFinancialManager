@@ -4,7 +4,7 @@ import { recordHistory } from '../history.js';
 import { checkAlerts } from '../alerts.js';
 import { checkWatch } from '../watchlist.js';
 import { fetchCryptoPrices } from './crypto.js';
-import { fetchStockQuotes } from './stocks.js';
+import { fetchStockQuotes, fetchFutures } from './stocks.js';
 import { ensureBenchmark, firstBuyDate } from '../performance.js';
 import { ensureInflation } from '../inflation.js';
 
@@ -30,6 +30,7 @@ export async function refresh({ crypto = true, stocks = true, force = false } = 
     ]);
     if (c !== null) net.crypto = c;
     if (s !== null) net.stocks = s;
+    if (stocks) await fetchFutures().catch(() => 0);
     recordHistory();
     const fired = [...checkAlerts(), ...checkWatch()];
     net.alerts = fired.length;

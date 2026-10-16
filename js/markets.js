@@ -1,4 +1,6 @@
 import { state } from './store.js';
+import { metrics } from './calc.js';
+import { conv, disp } from './fx.js';
 
 /* ---------- calendário ---------- */
 
@@ -212,4 +214,55 @@ export function extFromChart(d, regular, div = 1) {
     return { price, pct: ((price - regular) / regular) * 100, phase: t < s.open ? 'pre' : 'post', at: t };
   }
   return null;
+}
+
+/* ---------- pré/pós-mercado da carteira e futuros ---------- */
+
+/** As tuas ações dos EUA com preço de pré/pós-mercado e o efeito em cada uma (moeda de visualização). */
+export function extRows(positions = state.positions, now = Date.now()) {
+  return positions.flatMap(p => {
+    const e = p.kind === 'stock' ? extQuote(p.quoteSymbol, now) : null;
+    if (!e) return [];
+    const m = metrics(p);
+    return m.live ? [{ p, e, m, effect: conv(m.u * (e.price - m.nativePrice), m.nativeCur, disp()) }] : [];
+  }).sort((a, b) => Math.abs(b.effect) - Math.abs(a.effect));
+}
+
+/** Futuros dos índices dos EUA: antes da abertura indicam para onde vão os ETFs desses índices cotados na Europa. */
+export const FUTURES = { sp500: { y: 'ES=F', name: 'S&P 500' }, ndx: { y: 'NQ=F', name: 'Nasdaq 100' } };
+
+const INDEX_TICKERS = {
+  VUAA: 'sp500', VUSA: 'sp500', CSPX: 'sp500', SXR8: 'sp500', IUSA: 'sp500', SPY5: 'sp500', SPXS: 'sp500', SPXP: 'sp500',
+  EQQQ: 'ndx', CNDX: 'ndx', SXRV: 'ndx', EQQB: 'ndx', NQSE: 'ndx',
+};
+const INDEX_NAMES = [[/s\s*&\s*p\s*500/i, 'sp500'], [/nasdaq[\s-]*100/i, 'ndx']];
+
+/** Índice dos EUA que um ETF cotado fora dos EUA segue (pelo ticker ou pelo nome). */
+export function trackedIndex(p) {
+  if (p?.kind !== 'stock' || !p.quoteSymbol || marketOf(p.quoteSymbol) === 'us') return null;
+  const t = String(p.symbol || '').toUpperCase();
+  if (INDEX_TICKERS[t]) return INDEX_TICKERS[t];
+  return INDEX_NAMES.find(([re]) => re.test(p.name || ''))?.[1] ?? null;
+}
+
+/** Futuros que interessam: os dos índices dos teus ETFs e o do S&P 500 se tens ações dos EUA. */
+export function futuresWanted(items) {
+  const ids = new Set();
+  for (const p of items) {
+    const i = trackedIndex(p);
+    if (i) ids.add(i);
+    else if (p.kind === 'stock' && marketOf(p.quoteSymbol) === 'us') ids.add('sp500');
+  }
+  return Object.keys(FUTURES).filter(id => ids.has(id));
+}
+
+/** Os futuros só se mostram com a bolsa dos EUA fechada num dia útil (ao fim de semana param). */
+export function futuresTime(now = Date.now()) {
+  const st = marketStatus('us', now);
+  return st.phase === 'pre' || st.phase === 'post' || (st.phase === 'closed' && st.reason === 'night');
+}
+
+export function futureQuote(id, now = Date.now()) {
+  const q = state.cache.stockPrices[FUTURES[id]?.y];
+  return q?.price > 0 && q.dayPct != null && now - (q.ts || 0) < 3 * 3600_000 ? q : null;
 }
