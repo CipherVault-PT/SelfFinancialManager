@@ -11,6 +11,7 @@ import { esc, money, price, pct, signed, units, sym, num, inputNum, todayISO } f
 import { $, toast, openModal, closeModal, segmented, debounce } from './dom.js';
 import { coinSearch, stockSearch } from './asset-search.js';
 import { removeWatch } from '../watchlist.js';
+import { dayMoveAt, dayWord } from '../markets.js';
 import { journalLine } from './modal-journal.js';
 import { lotForm } from './lot-form.js';
 import { cashPicker } from './cash-pick.js';
@@ -92,7 +93,7 @@ export function modalAdd(preset = null) {
     const h = $('#quoteHint');
     if (q) {
       stock.c = q.cur;
-      if (h) h.innerHTML = `Cotação atual: <b>${price(q.price, q.cur)}</b>${q.dayPct != null ? ` · hoje ${pct(q.dayPct)}` : ''}`;
+      if (h) h.innerHTML = `Cotação atual: <b>${price(q.price, q.cur)}</b>${q.dayPct != null ? ` · ${dayWord(dayMoveAt(stock.y, { ...q, ts: Date.now() }))} ${pct(q.dayPct)}` : ''}`;
       form.render();
       form.prefillPrice(q.price, q.cur);
     } else if (h) {

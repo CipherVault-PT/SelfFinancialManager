@@ -33,6 +33,8 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Sincronização entre dispositivos** cifrada de ponta a ponta, através do teu Worker da Cloudflare (ver abaixo).
 - **Estado das bolsas**: faixa com as bolsas das tuas ações — aberta, pré-mercado, pós-mercado ou fechada, até quando e quando abre — na tua hora, com a mudança de hora de cada país, feriados principais e meios-dias (o Yahoo corrige o horário do próprio dia). Toca para ver o horário de todas as bolsas.
 - **Pré e pós-mercado dos EUA** (como no Investing): fora do horário normal aparece no topo um painel com as tuas ações dos EUA — preço do pré/pós-mercado, variação e quanto mexe em cada posição e no total. Para ETFs europeus do S&P 500 ou do Nasdaq 100 (ex.: VUAA, CSPX, EQQQ) mostra os **futuros** do índice, que indicam como podem abrir. O valor da carteira continua a contar com o preço do horário normal. Fontes: o Yahoo e, como experiência, a CNBC — fica o negócio mais recente das duas (o Yahoo só apanha negócios de algumas bolsas fora de horas). Tocar na faixa das bolsas mostra, por ação, de onde vem o preço.
+- **"Hoje" honesto**: antes de uma bolsa abrir, as fontes dão a variação da sessão anterior — essas ações ficam fora do "Hoje" (com a nota "«Hoje» ainda sem EUA — abre às 14:30" ou "Bolsas fechadas hoje") e o cartão diz de quando é a variação ("ontem +2%", "sex. −1%").
+- **Efeito do câmbio**: nas ações cotadas noutra moeda, o resultado aparece separado em **ação** (quanto subiu ou desceu na moeda dela) e **câmbio** (o que a moeda mudou desde as compras, mais as taxas de conversão). No painel, por moeda: câmbio médio das compras vs o de hoje. Usa o preço em moeda estrangeira de cada compra ou, sem ele, o câmbio do BCE nesse dia.
 - **A seguir (watchlist)**: ações, ETFs e cripto que ainda não tens — preço ao vivo, variação do dia, pré/pós-mercado, variação desde que começaste a seguir, nota e **preço-alvo** (descer até / subir até) com aviso quando lá chega. "Comprar" abre a nova posição já preenchida e tira o ativo da lista. Sincroniza e entra no backup.
 - **Diário de trades**: em cada posição, a **tese** (porque compraste), o **alvo** e o **stop** — com a distância ao preço atual, quanto ganhas face ao que arriscas e, se quiseres, alertas nesses preços. Ao vender, a app mostra o plano e pede uma nota. No Histórico, estatísticas por ano / 12 meses / tudo: taxa de acerto, ganho e perda médios, rácio ganho ÷ perda, profit factor, resultado por trade, tempo médio (ganhos vs perdas), melhor e pior — e avisos como "seguras as perdas mais tempo do que os ganhos" (a partir de 5 vendas).
 - **Alertas de preço** com notificações.
@@ -83,6 +85,7 @@ js/
   markets.js            horário das bolsas, feriados, fusos horários e pré/pós-mercado
   watchlist.js          lista "A seguir": cotação, alvo e avisos
   journal.js            diário de trades: dias na carteira, estatísticas e observações
+  fxeffect.js           efeito do câmbio: separa o resultado em ação e câmbio
   plans.js              planos de poupança mensais
   goals.js              metas: projeção com juros compostos, regra dos 4%
   rebalance.js          alocação alvo e sugestão de onde investir

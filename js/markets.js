@@ -190,6 +190,61 @@ export function marketsHeld(items) {
   return Object.keys(MARKETS).filter(id => ids.has(id));
 }
 
+/* ---------- a que dia se refere a "variação do dia" ---------- */
+
+const DAY_NAMES = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
+const localDay = ts => { const d = new Date(ts); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); };
+/** Dois instantes no mesmo dia, na hora do dispositivo. */
+export const sameDay = (a, b) => localDay(a) === localDay(b);
+
+/** Última sessão de uma bolsa que já tinha aberto às `t`. */
+function lastSession(id, t) {
+  const today = dateIn(t, MARKETS[id].tz);
+  for (let i = 0; i <= 10; i++) {
+    const s = sessionOn(id, addDays(today, -i));
+    if (s && s.open <= t) return s;
+  }
+  return null;
+}
+
+/**
+ * Quando foi o movimento que a variação do dia de uma ação mostra: a hora do último negócio no horário
+ * normal (vem do Yahoo) ou, sem ela, a abertura da última sessão antes de a cotação chegar.
+ * Antes da abertura, a variação que as fontes dão é a da sessão anterior.
+ */
+export function dayMoveAt(y, q = y ? state.cache.stockPrices[y] : null) {
+  if (q?.mt > 0) return q.mt;
+  const t = q?.ts || Date.now(), id = marketOf(y);
+  return (id && lastSession(id, t)?.open) || t;
+}
+
+/** "hoje", "ontem", o dia da semana ("sex.") ou a data, na hora do dispositivo. */
+export function dayWord(at, now = Date.now()) {
+  const days = Math.round((localDay(now) - localDay(at)) / 86_400_000);
+  if (days <= 0) return 'hoje';
+  if (days === 1) return 'ontem';
+  const d = new Date(at);
+  return days < 7 ? DAY_NAMES[d.getDay()] : `${d.getDate()}/${d.getMonth() + 1}`;
+}
+
+/**
+ * Bolsas das tuas ações cuja variação ainda não é de hoje (ficam fora do "Hoje"): [{ id, open }],
+ * com `open` = hora a que abrem hoje, ou null se hoje não abrem (fim de semana ou feriado).
+ */
+export function notToday(positions = state.positions, now = Date.now()) {
+  const out = new Map();
+  for (const p of positions) {
+    const id = p.kind === 'stock' ? marketOf(p.quoteSymbol) : null;
+    const q = id ? state.cache.stockPrices[p.quoteSymbol] : null;
+    if (!q || out.has(id) || q.dayPct == null || sameDay(dayMoveAt(p.quoteSymbol, q), now)) continue;
+    const last = lastSession(id, now);
+    if (last && sameDay(last.open, now)) continue; // já abriu hoje: a cotação atualiza-se a seguir
+    const st = marketStatus(id, now), s = st.session ?? st.next;
+    out.set(id, s && s.open > now && sameDay(s.open, now) ? s.open : null);
+  }
+  return [...out].map(([id, open]) => ({ id, open })).sort((a, b) => (a.open ?? Infinity) - (b.open ?? Infinity));
+}
+
 /** Preço do pré/pós-mercado guardado para um símbolo dos EUA, se fizer sentido mostrá-lo agora. */
 export function extQuote(y, now = Date.now()) {
   const q = y ? state.cache.stockPrices[y] : null;
