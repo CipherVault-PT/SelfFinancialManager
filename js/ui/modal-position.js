@@ -3,14 +3,14 @@ import { state, commit, uid } from '../store.js';
 import { conv } from '../fx.js';
 import { metrics, avgDisp, feeFor, quoteCurOf, qty, pCost, sellFIFO, mergeLots } from '../calc.js';
 import { dropAlertsFor } from '../alerts.js';
-import { searchLocal } from '../stocks.js';
-import { searchCoins } from '../quotes/crypto.js';
-import { quoteFor, searchYahoo } from '../quotes/stocks.js';
+import { quoteFor } from '../quotes/stocks.js';
 import { refresh } from '../quotes/index.js';
 import { requestPersistence } from '../backup.js';
 import { creditSale, debitBuy, dropCashRefs, saleCashLabel } from '../cash.js';
 import { esc, money, price, pct, signed, units, sym, num, inputNum, todayISO } from '../format.js';
 import { $, toast, openModal, closeModal, segmented, debounce } from './dom.js';
+import { coinSearch, stockSearch } from './asset-search.js';
+import { removeWatch } from '../watchlist.js';
 import { lotForm } from './lot-form.js';
 import { cashPicker } from './cash-pick.js';
 import { ui } from './render.js';
@@ -19,7 +19,6 @@ const header = title => `<div class="mh"><h3>${title}</h3><button type="button" 
 const platformOptions = sel => [...PLATFORMS, 'Outra'].map(p => `<option${p === sel ? ' selected' : ''}>${esc(p)}</option>`).join('');
 const findPos = id => state.positions.find(x => x.id === id);
 const SYMBOL_RE = /^[A-Za-z0-9.\-=^]{1,24}$/;
-const enterClicks = e => { if (e.key === 'Enter') e.target.closest('.res')?.click(); };
 
 function pickedHtml(name, sub, thumb) {
   return `<div class="picked">${thumb
@@ -31,12 +30,17 @@ function pickedHtml(name, sub, thumb) {
 
 /* ---------- nova posição ---------- */
 
-export function modalAdd() {
-  const draft = { kind: 'crypto', currency: 'EUR', coin: null, stock: null, manual: false, quote: null, quoteToken: 0 };
+/** Nova posição; `preset` ({ kind, coin | stock, watchId }) vem da lista "A seguir". */
+export function modalAdd(preset = null) {
+  if (typeof preset !== 'object') preset = null;
+  const draft = {
+    kind: preset?.kind ?? 'crypto', currency: preset?.kind === 'stock' ? 'EUR' : (preset?.currency ?? 'EUR'),
+    coin: preset?.coin ?? null, stock: preset?.stock ?? null, manual: false, quote: null, quoteToken: 0,
+  };
 
   openModal(`${header('Nova posição')}
     <div class="field"><label>Tipo de ativo</label><div class="mseg" id="dKind">
-      <button type="button" data-k="crypto" class="on">Cripto</button><button type="button" data-k="stock">Ação / ETF</button></div></div>
+      <button type="button" data-k="crypto" class="${draft.kind === 'crypto' ? 'on' : ''}">Cripto</button><button type="button" data-k="stock" class="${draft.kind === 'stock' ? 'on' : ''}">Ação / ETF</button></div></div>
     <div id="assetArea"></div>
     <div class="field"><label for="dPlat">Plataforma</label><select class="inp" id="dPlat">${platformOptions('Revolut')}</select></div>
     <div class="field"><label>Moeda da conta <span class="sublbl">o dinheiro que usaste</span></label><div id="curArea"></div></div>
@@ -108,37 +112,11 @@ export function modalAdd() {
         $('#coinWrap [data-clear]').onclick = () => { draft.coin = null; renderAsset(); updatePreview(); };
         return;
       }
-      let coins = [], token = 0;
-      const box = $('#dResults');
-      const run = debounce(async q => {
-        const my = ++token;
-        try {
-          coins = await searchCoins(q);
-          if (my !== token) return;
-          box.innerHTML = coins.length
-            ? coins.map((c, i) => `<div class="res" data-i="${i}" role="button" tabindex="0">
-                <img src="${esc(c.thumb)}" alt="" loading="lazy">
-                <div><div class="rn">${esc(c.name)}</div><div class="rs">${esc(c.symbol)}</div></div>
-                ${c.rank ? `<div class="rr">#${esc(c.rank)}</div>` : ''}</div>`).join('')
-            : '<div class="searching">Nada encontrado</div>';
-        } catch (e) {
-          if (my === token) box.innerHTML = `<div class="searching">${esc(e.message)}</div>`;
-        }
-      }, 300);
-      $('#dSearch').oninput = e => {
-        const q = e.target.value.trim();
-        if (q.length < 2) { token++; box.innerHTML = ''; return; }
-        box.innerHTML = '<div class="searching">A procurar…</div>';
-        run(q);
-      };
-      box.onclick = e => {
-        const r = e.target.closest('.res');
-        if (!r) return;
-        draft.coin = coins[+r.dataset.i];
+      coinSearch($('#dSearch'), $('#dResults'), coin => {
+        draft.coin = coin;
         renderAsset();
         updatePreview();
-      };
-      box.onkeydown = enterClicks;
+      });
       return;
     }
 
@@ -173,47 +151,14 @@ export function modalAdd() {
       return;
     }
 
-    let local = [], online = [], shown = [], token = 0;
-    const box = $('#sResults');
-    const row = (s, i) => `<div class="res" data-i="${i}" role="button" tabindex="0">
-        <div class="tkn" style="width:26px;height:26px;font-size:9.5px">${esc(s.t.slice(0, 4))}</div>
-        <div style="min-width:0"><div class="rn">${esc(s.n)}</div><div class="rs">${esc(s.y)}${s.x ? ` · ${esc(s.x)}` : ''}</div></div>
-        <div class="rr">${esc(s.c || '')}</div></div>`;
-    const draw = (pending = false) => {
-      const seen = new Set(local.map(s => s.y));
-      const extra = online.filter(s => !seen.has(s.y));
-      shown = [...local, ...extra];
-      box.innerHTML = (local.map(row).join('')
-        + (extra.length ? `<div class="res-sep">Mais resultados (Yahoo)</div>${extra.map((s, i) => row(s, local.length + i)).join('')}` : '')
-        + (pending ? '<div class="searching">A procurar mais…</div>' : ''))
-        || '<div class="searching">Sem resultados — usa “escrever à mão”</div>';
-    };
-    const runOnline = debounce(async q => {
-      const my = ++token;
-      const res = await searchYahoo(q).catch(() => []);
-      if (my !== token) return;
-      online = res;
-      draw();
-    }, 450);
-    $('#sSearch').oninput = e => {
-      const q = e.target.value.trim();
-      local = searchLocal(q);
-      online = [];
-      token++;
-      if (q.length >= 2) { draw(true); runOnline(q); } else draw();
-      if (!q) box.innerHTML = '';
-    };
-    box.onclick = e => {
-      const r = e.target.closest('.res');
-      if (!r) return;
-      draft.stock = { ...shown[+r.dataset.i] };
+    stockSearch($('#sSearch'), $('#sResults'), stock => {
+      draft.stock = stock;
       draft.quote = null;
       renderAsset();
       form.render();
       updatePreview();
-      loadQuote(draft.stock);
-    };
-    box.onkeydown = enterClicks;
+      loadQuote(stock);
+    }, 'Sem resultados — usa “escrever à mão”');
   }
 
   segmented($('#dKind'), 'k', k => {
@@ -229,6 +174,7 @@ export function modalAdd() {
   pick = cashPicker($('#dCash'), {
     mode: 'buy', platform: () => $('#dPlat').value, currency: () => draft.currency, amount: () => form.read().cost,
   });
+  if (draft.stock) loadQuote(draft.stock);
 
   function save() {
     const d = form.read();
@@ -261,9 +207,10 @@ export function modalAdd() {
     if (draft.quote && p.quoteSymbol) state.cache.stockPrices[p.quoteSymbol] = { ...draft.quote, ts: Date.now() };
     state.positions.push(p);
     const used = debitBuy(pick.value(), { amount: d.cost, currency: p.currency, platform: p.platform, date, posId: p.id });
+    const fromWatch = preset?.watchId ? removeWatch(preset.watchId) : null;
     commit();
     closeModal();
-    toast(`Posição adicionada${used > 0 ? ` · ${money(used, p.currency)} saíram do saldo` : ''}`);
+    toast(`Posição adicionada${used > 0 ? ` · ${money(used, p.currency)} saíram do saldo` : ''}${fromWatch ? ' · saiu da lista “A seguir”' : ''}`);
     requestPersistence();
     refresh({ crypto: p.kind === 'crypto', stocks: p.kind === 'stock' && !draft.quote, force: true });
   }

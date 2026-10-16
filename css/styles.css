@@ -574,3 +574,16 @@ a.btn{text-decoration:none}
 .mk-s{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .mk-s small{flex-basis:100%}
 @media(max-width:520px){.mk-row{grid-template-columns:1fr 1fr}.mk-n{grid-column:1/-1}}
+
+/* ---------- lista "A seguir" ---------- */
+.wrow .sub .mk-dot{vertical-align:middle;margin:0 1px}
+.w-target{margin-top:10px;font-size:12.5px;color:var(--muted)}
+.w-target b{color:var(--text);font-weight:500}
+.w-target.hit{color:var(--up)}
+.w-note{margin-top:8px;font-size:12.5px;color:var(--muted);font-style:italic;white-space:pre-wrap;overflow-wrap:anywhere}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--brass)}
+.tabs{overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{white-space:nowrap;flex:none}
+@media(max-width:480px){.tabs button{margin-right:14px;font-size:14px}}

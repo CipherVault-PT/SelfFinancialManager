@@ -9,7 +9,7 @@ const MIN_INTERVAL = 45_000;
 
 let lastRun = 0;
 
-const cryptoPositions = () => state.positions.filter(p => p.kind === 'crypto' && p.coingeckoId);
+const cryptoPositions = () => [...state.positions, ...state.watchlist].filter(p => p.kind === 'crypto' && p.coingeckoId);
 
 export function parseCoinGecko(d, ts = Date.now()) {
   const out = {};

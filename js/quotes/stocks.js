@@ -104,14 +104,14 @@ export async function quoteFor(y) {
 
 let running = null;
 
-/** Atualiza as cotações de todas as ações/ETFs abertos (3 pedidos em simultâneo). */
+/** Atualiza as cotações das ações/ETFs abertos e dos que estão na lista "A seguir" (3 pedidos em simultâneo). */
 export function fetchStockQuotes(opts) {
   running ??= run(opts).finally(() => { running = null; });
   return running;
 }
 
 async function run({ force = false } = {}) {
-  const syms = [...new Set(state.positions.filter(p => p.kind === 'stock' && p.quoteSymbol).map(p => p.quoteSymbol))];
+  const syms = [...new Set([...state.positions, ...state.watchlist].filter(p => p.kind === 'stock' && p.quoteSymbol).map(p => p.quoteSymbol))];
   if (!syms.length) return { ok: 0, fail: 0, total: 0 };
   const miss = state.cache.stockMiss;
   const now = Date.now();
@@ -121,7 +121,7 @@ async function run({ force = false } = {}) {
     const q = await quoteFor(y);
     if (q) {
       state.cache.stockPrices[y] = { ...q, ts: Date.now() };
-      for (const p of state.positions) if (p.quoteSymbol === y) p.quoteCur = q.cur;
+      for (const p of [...state.positions, ...state.watchlist]) if (p.quoteSymbol === y) p.quoteCur = q.cur;
       delete miss[y];
       ok++;
     }

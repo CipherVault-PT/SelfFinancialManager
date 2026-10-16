@@ -2,13 +2,14 @@ import { commit } from '../store.js';
 import { fetchFx } from '../fx.js';
 import { recordHistory } from '../history.js';
 import { checkAlerts } from '../alerts.js';
+import { checkWatch } from '../watchlist.js';
 import { fetchCryptoPrices } from './crypto.js';
 import { fetchStockQuotes } from './stocks.js';
 import { ensureBenchmark, firstBuyDate } from '../performance.js';
 import { ensureInflation } from '../inflation.js';
 
 /** Estado das últimas atualizações (não é guardado). */
-export const net = { busy: 0, manual: false, fx: null, crypto: null, stocks: null };
+export const net = { busy: 0, manual: false, fx: null, crypto: null, stocks: null, alerts: 0 };
 
 let alertHandler = () => {};
 export const onAlerts = fn => { alertHandler = fn; };
@@ -30,7 +31,8 @@ export async function refresh({ crypto = true, stocks = true, force = false } = 
     if (c !== null) net.crypto = c;
     if (s !== null) net.stocks = s;
     recordHistory();
-    const fired = checkAlerts();
+    const fired = [...checkAlerts(), ...checkWatch()];
+    net.alerts = fired.length;
     if (fired.length) alertHandler(fired);
   } finally {
     net.busy--;
