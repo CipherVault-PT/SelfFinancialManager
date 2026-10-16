@@ -106,14 +106,16 @@ const SRC = { yahoo: 'Yahoo', twelvedata: 'Twelve Data (sem pré/pós-mercado)' 
 
 /** De onde vem a cotação de cada ação dos EUA e o último negócio fora de horas — para perceber o que falta. */
 function usDiagnostics(now) {
-  const list = state.positions.filter(p => p.kind === 'stock' && (marketOf(p.quoteSymbol) === 'us' || !p.quoteSymbol));
+  const seen = new Set();
+  const list = state.positions.filter(p => p.kind === 'stock' && (marketOf(p.quoteSymbol) === 'us' || !p.quoteSymbol)
+    && !(p.quoteSymbol && seen.has(p.quoteSymbol)) && (seen.add(p.quoteSymbol), true));
   if (!list.length) return '';
   const row = p => {
     const q = p.quoteSymbol ? state.cache.stockPrices[p.quoteSymbol] : null;
     const e = q?.ext;
     const info = !p.quoteSymbol ? 'sem símbolo — preço à mão'
       : !q ? 'sem cotação ainda'
-        : `${SRC[q.src] ?? 'Yahoo'} · atualizada ${hm(q.ts)}${e ? ` · último negócio fora de horas: ${e.phase === 'pre' ? 'pré' : 'pós'} ${when(e.at, now)} a ${price(e.price, q.cur)}` : q.src === 'twelvedata' ? '' : ' · sem negócios fora de horas no Yahoo'}`;
+        : `${SRC[q.src] ?? 'Yahoo'} · atualizada ${hm(q.ts)}${e ? ` · último negócio fora de horas: ${e.phase === 'pre' ? 'pré' : 'pós'} ${when(e.at, now)} a ${price(e.price, q.cur)} (${e.src === 'cnbc' ? 'CNBC' : 'Yahoo'})` : q.src === 'twelvedata' ? '' : ' · sem negócios fora de horas no Yahoo'}`;
     return `<div class="mk-dg"><b>${esc(p.name)}</b> <span class="mono">${esc(p.quoteSymbol || '—')}</span><small>${esc(info)}</small></div>`;
   };
   return `<div class="mlabel" style="margin-top:6px">As tuas ações dos EUA · dados fora de horas</div><div class="mk-dgs">${list.map(row).join('')}</div>`;

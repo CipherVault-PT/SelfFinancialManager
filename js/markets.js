@@ -208,12 +208,19 @@ export function extFromChart(d, regular, div = 1) {
   for (let i = ts.length - 1; i >= 0; i--) {
     const c = close[i], t = ts[i] * 1000;
     if (!(c > 0) || !Number.isFinite(t)) continue;
-    const s = sessionOn('us', dateIn(t, MARKETS.us.tz));
-    if (!s || (t >= s.open && t < s.close)) return null;
+    const phase = extPhaseAt(t);
+    if (!phase) return null;
     const price = c / div;
-    return { price, pct: ((price - regular) / regular) * 100, phase: t < s.open ? 'pre' : 'post', at: t };
+    return { price, pct: ((price - regular) / regular) * 100, phase, at: t };
   }
   return null;
+}
+
+/** Um negócio às `t` (ms) nos EUA foi no pré ou no pós-mercado? null no horário normal ou num dia sem bolsa. */
+export function extPhaseAt(t) {
+  const s = sessionOn('us', dateIn(t, MARKETS.us.tz));
+  if (!s || (t >= s.open && t < s.close)) return null;
+  return t < s.open ? 'pre' : 'post';
 }
 
 /* ---------- pré/pós-mercado da carteira e futuros ---------- */
