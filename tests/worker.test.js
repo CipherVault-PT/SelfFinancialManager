@@ -20,9 +20,9 @@ test('worker: cotações só do Yahoo, da CNBC e do BCE, com CORS', async () => 
   assert.equal(res.headers.get('access-control-allow-origin'), '*');
   assert.deepEqual(await res.json(), { chart: {} });
   assert.equal((await call('https://data-api.ecb.europa.eu/service/data/ICP/M.PT.N.000000.4.INX?format=jsondata')).status, 200);
-  assert.equal((await call('https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=ARRY&output=json')).status, 200);
-  assert.equal((await call('https://www.cnbc.com/quotes/ARRY')).status, 403, 'só o serviço de cotações');
-  assert.deepEqual(seen, ['https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1d', 'https://data-api.ecb.europa.eu/service/data/ICP/M.PT.N.000000.4.INX?format=jsondata', 'https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=ARRY&output=json']);
+  assert.equal((await call('https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=ZZA&output=json')).status, 200);
+  assert.equal((await call('https://www.cnbc.com/quotes/ZZA')).status, 403, 'só o serviço de cotações');
+  assert.deepEqual(seen, ['https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1d', 'https://data-api.ecb.europa.eu/service/data/ICP/M.PT.N.000000.4.INX?format=jsondata', 'https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=ZZA&output=json']);
   const pre = await worker.fetch(new Request('https://w.dev/sync', { method: 'OPTIONS' }));
   assert.match(pre.headers.get('access-control-allow-methods'), /PUT/);
   assert.match(pre.headers.get('access-control-allow-headers'), /Authorization/);

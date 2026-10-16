@@ -180,34 +180,34 @@ test('pré-mercado sem negócios: usa o fecho do pós-mercado de ontem (guardado
   reset({ settings: { proxyUrl: 'https://meu.workers.dev' } });
   const pre = at('2026-10-16T08:30:00Z'), q = { price: 7, cur: 'USD', dayPct: 0 };
   const post = { price: 7.2, pct: 2.857, phase: 'post', at: at('2026-10-15T23:50:00Z') };
-  state.cache.stockPrices.ARRY = { price: 7, cur: 'USD', ext: post };
-  assert.deepEqual((await withLastPost('ARRY', q, pre)).ext, post, 'guardado de ontem à noite');
+  state.cache.stockPrices.ZZA = { price: 7, cur: 'USD', ext: post };
+  assert.deepEqual((await withLastPost('ZZA', q, pre)).ext, post, 'guardado de ontem à noite');
 
-  state.cache.stockPrices.ARRY = { price: 7, cur: 'USD' };
+  state.cache.stockPrices.ZZA = { price: 7, cur: 'USD' };
   const t = s => at(s) / 1000;
   const calls = mockFetch([['meu.workers.dev', { chart: { result: [{
     meta: { regularMarketPrice: 7, chartPreviousClose: 6.9, currency: 'USD', dataGranularity: '1h' },
     timestamp: [t('2026-10-15T19:30:00Z'), t('2026-10-15T22:00:00Z'), t('2026-10-15T23:00:00Z')],
     indicators: { quote: [{ close: [7, 7.1, 7.25] }] },
   }], error: null } }]]);
-  const r = await withLastPost('ARRY', q, pre);
+  const r = await withLastPost('ZZA', q, pre);
   assert.deepEqual([r.ext.price, r.ext.phase, r.postChecked], [7.25, 'post', 7]);
   assert.ok(decodeURIComponent(calls[0]).includes('interval=1h&range=5d&includePrePost=true'));
-  state.cache.stockPrices.ARRY = { price: 7, cur: 'USD', postChecked: 7 };
-  await withLastPost('ARRY', q, pre);
+  state.cache.stockPrices.ZZA = { price: 7, cur: 'USD', postChecked: 7 };
+  await withLastPost('ZZA', q, pre);
   assert.equal(calls.length, 1, 'só pede uma vez por dia');
-  assert.equal((await withLastPost('ARRY', q, at('2026-10-16T15:00:00Z'))).ext, undefined, 'com a bolsa aberta não');
+  assert.equal((await withLastPost('ZZA', q, at('2026-10-16T15:00:00Z'))).ext, undefined, 'com a bolsa aberta não');
   assert.equal(await withLastPost('SAP.DE', null, pre), null);
 });
 
 test('pré-mercado: pede uma janela explícita de 18 h (o "dia" do Yahoo antes da abertura ainda pode ser ontem)', () => {
   const now = at('2026-10-16T08:24:30Z');
-  const u = new URL(yahooChartUrl('ARRY', true, now));
+  const u = new URL(yahooChartUrl('ZZA', true, now));
   const p1 = +u.searchParams.get('period1'), p2 = +u.searchParams.get('period2');
   assert.deepEqual([u.searchParams.get('interval'), u.searchParams.get('includePrePost'), u.searchParams.get('range')], ['5m', 'true', null]);
   assert.equal(p2, at('2026-10-16T08:25:00Z') / 1000, 'arredondado ao minuto (cache)');
   assert.equal(p2 - p1, 18 * 3600, 'apanha o pós-mercado de ontem e o pré-mercado de hoje');
-  assert.equal(yahooChartUrl('ARRY', true, now + 20_000), yahooChartUrl('ARRY', true, now));
+  assert.equal(yahooChartUrl('ZZA', true, now + 20_000), yahooChartUrl('ZZA', true, now));
   assert.match(yahooChartUrl('SAP.DE'), /interval=1d&range=1d$/);
 
   // resposta com o pós de ontem e o pré de hoje → fica o pré de hoje
