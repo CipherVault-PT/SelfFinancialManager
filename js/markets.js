@@ -218,14 +218,22 @@ export function extFromChart(d, regular, div = 1) {
 
 /* ---------- pré/pós-mercado da carteira e futuros ---------- */
 
-/** As tuas ações dos EUA com preço de pré/pós-mercado e o efeito em cada uma (moeda de visualização). */
+/**
+ * As tuas ações dos EUA fora do horário normal, com o efeito do pré/pós-mercado em cada uma (moeda de visualização).
+ * No pré e no pós-mercado entram todas — as que ainda não tiveram negócios vêm com `e` a null.
+ */
 export function extRows(positions = state.positions, now = Date.now()) {
-  return positions.flatMap(p => {
-    const e = p.kind === 'stock' ? extQuote(p.quoteSymbol, now) : null;
-    if (!e) return [];
+  const phase = marketStatus('us', now).phase;
+  if (phase === 'open') return [];
+  const rows = positions.flatMap(p => {
+    if (p.kind !== 'stock' || marketOf(p.quoteSymbol) !== 'us') return [];
+    const e = extQuote(p.quoteSymbol, now);
+    if (!e && phase === 'closed') return [];
     const m = metrics(p);
-    return m.live ? [{ p, e, m, effect: conv(m.u * (e.price - m.nativePrice), m.nativeCur, disp()) }] : [];
-  }).sort((a, b) => Math.abs(b.effect) - Math.abs(a.effect));
+    return m.live ? [{ p, e, m, effect: e ? conv(m.u * (e.price - m.nativePrice), m.nativeCur, disp()) : null }] : [];
+  });
+  const size = r => (r.e ? Math.abs(r.effect) : -1);
+  return rows.sort((a, b) => size(b) - size(a));
 }
 
 /** Futuros dos índices dos EUA: antes da abertura indicam para onde vão os ETFs desses índices cotados na Europa. */

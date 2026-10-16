@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state } from '../js/store.js';
 import { MARKETS, easter, marketOf, marketStatus, sessionOn, isTradingDay, noteSession, extFromChart, extQuote, marketsHeld, zoned, extRows, trackedIndex, futuresWanted, futuresTime, futureQuote } from '../js/markets.js';
-import { fetchFutures } from '../js/quotes/stocks.js';
+import { fetchFutures, withLastPost } from '../js/quotes/stocks.js';
 import { parseYahooChart } from '../js/quotes/stocks.js';
 import { reset, stockPos, lot, mockFetch } from './helpers.js';
 
@@ -157,4 +157,42 @@ test('futuros: ETFs europeus do S&P 500 / Nasdaq 100 e quando se mostram', async
   assert.equal(+q.dayPct.toFixed(3), 0.167);
   assert.equal(futureQuote('sp500', Date.now() + 4 * 3600_000), null, 'antigo');
   assert.equal(futureQuote('ndx'), null);
+});
+
+test('pré-mercado: ações ainda sem negócios aparecem na lista (sem efeito); fechado só as que têm preço', () => {
+  reset();
+  const now = at('2026-10-16T08:30:00Z'); // 4:30 em Nova Iorque
+  state.positions = [stockPos({ id: 'x', quoteSymbol: 'XXX', symbol: 'XXX' }), stockPos({ id: 'y', quoteSymbol: 'YYY', symbol: 'YYY' })];
+  state.cache.stockPrices = {
+    XXX: { price: 20, cur: 'USD', ts: now, ext: { price: 21, pct: 5, phase: 'pre', at: now - 60_000 } },
+    YYY: { price: 7, cur: 'USD', ts: now },
+  };
+  assert.deepEqual(extRows(state.positions, now).map(r => [r.p.id, r.e ? r.e.price : null, r.effect]), [['x', 21, 8], ['y', null, null]]);
+  const sat = at('2026-10-17T12:00:00Z');
+  state.cache.stockPrices.XXX.ext.at = sat - 60_000;
+  assert.deepEqual(extRows(state.positions, sat).map(r => r.p.id), ['x'], 'ao fim de semana só com preço');
+});
+
+test('pré-mercado sem negócios: usa o fecho do pós-mercado de ontem (guardado ou pedido uma vez)', async () => {
+  reset({ settings: { proxyUrl: 'https://meu.workers.dev' } });
+  const pre = at('2026-10-16T08:30:00Z'), q = { price: 7, cur: 'USD', dayPct: 0 };
+  const post = { price: 7.2, pct: 2.857, phase: 'post', at: at('2026-10-15T23:50:00Z') };
+  state.cache.stockPrices.ZZA = { price: 7, cur: 'USD', ext: post };
+  assert.deepEqual((await withLastPost('ZZA', q, pre)).ext, post, 'guardado de ontem à noite');
+
+  state.cache.stockPrices.ZZA = { price: 7, cur: 'USD' };
+  const t = s => at(s) / 1000;
+  const calls = mockFetch([['meu.workers.dev', { chart: { result: [{
+    meta: { regularMarketPrice: 7, chartPreviousClose: 6.9, currency: 'USD', dataGranularity: '1h' },
+    timestamp: [t('2026-10-15T19:30:00Z'), t('2026-10-15T22:00:00Z'), t('2026-10-15T23:00:00Z')],
+    indicators: { quote: [{ close: [7, 7.1, 7.25] }] },
+  }], error: null } }]]);
+  const r = await withLastPost('ZZA', q, pre);
+  assert.deepEqual([r.ext.price, r.ext.phase, r.postChecked], [7.25, 'post', 7]);
+  assert.ok(decodeURIComponent(calls[0]).includes('interval=1h&range=5d&includePrePost=true'));
+  state.cache.stockPrices.ZZA = { price: 7, cur: 'USD', postChecked: 7 };
+  await withLastPost('ZZA', q, pre);
+  assert.equal(calls.length, 1, 'só pede uma vez por dia');
+  assert.equal((await withLastPost('ZZA', q, at('2026-10-16T15:00:00Z'))).ext, undefined, 'com a bolsa aberta não');
+  assert.equal(await withLastPost('SAP.DE', null, pre), null);
 });
