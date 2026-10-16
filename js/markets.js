@@ -232,8 +232,15 @@ export function extRows(positions = state.positions, now = Date.now()) {
     const m = metrics(p);
     return m.live ? [{ p, e, m, effect: e ? conv(m.u * (e.price - m.nativePrice), m.nativeCur, disp()) : null }] : [];
   });
+  // a mesma ação em várias posições (ex.: duas corretoras) fica numa linha, com o efeito somado
+  const bySym = new Map();
+  for (const r of rows) {
+    const g = bySym.get(r.p.quoteSymbol);
+    if (!g) bySym.set(r.p.quoteSymbol, { ...r, count: 1 });
+    else { g.count++; if (g.effect != null) g.effect += r.effect; }
+  }
   const size = r => (r.e ? Math.abs(r.effect) : -1);
-  return rows.sort((a, b) => size(b) - size(a));
+  return [...bySym.values()].sort((a, b) => size(b) - size(a));
 }
 
 /** Futuros dos índices dos EUA: antes da abertura indicam para onde vão os ETFs desses índices cotados na Europa. */
