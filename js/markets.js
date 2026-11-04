@@ -248,11 +248,26 @@ export function notToday(positions = state.positions, now = Date.now()) {
   return [...out].map(([id, open]) => ({ id, open })).sort((a, b) => (a.open ?? Infinity) - (b.open ?? Infinity));
 }
 
-/** Preço do pré/pós-mercado guardado para um símbolo dos EUA, se fizer sentido mostrá-lo agora. */
+/** Fecho do horário normal mais recente — o pré/pós-mercado que interessa é o que veio depois dele. */
+export function lastClose(id, now = Date.now()) {
+  const today = dateIn(now, MARKETS[id].tz);
+  for (let i = 0; i <= 10; i++) {
+    const s = sessionOn(id, addDays(today, -i));
+    if (s && s.close <= now) return s.close;
+  }
+  return 0;
+}
+
+/**
+ * Preço do pré/pós-mercado guardado para um símbolo dos EUA, se fizer sentido mostrá-lo agora:
+ * só negócios depois do último fecho (no pós-mercado, um negócio do pré-mercado da manhã já não conta)
+ * e a variação face ao fecho atual, como no Investing.
+ */
 export function extQuote(y, now = Date.now()) {
   const q = y ? state.cache.stockPrices[y] : null;
-  if (!q?.ext || marketOf(y) !== 'us' || marketStatus('us', now).phase === 'open') return null;
-  return now - q.ext.at < 20 * 3600_000 ? q.ext : null;
+  if (!q?.ext || !(q.price > 0) || marketOf(y) !== 'us' || marketStatus('us', now).phase === 'open') return null;
+  if (now - q.ext.at >= 20 * 3600_000 || q.ext.at < lastClose('us', now)) return null;
+  return { ...q.ext, pct: ((q.ext.price - q.price) / q.price) * 100 };
 }
 
 /**

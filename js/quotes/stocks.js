@@ -4,7 +4,7 @@ import { fetchJSON, pool } from '../net.js';
 import { isCurrency } from '../format.js';
 import { micOf, twelveDataSymbol, currencyOfSymbol } from '../stocks.js';
 import { marketOf, marketStatus, noteSession, extFromChart, FUTURES, futuresWanted, futuresTime } from '../markets.js';
-import { cnbcExtended, mergeExtended } from './cnbc.js';
+import { cnbcExtended, mergeExtended, newestExt } from './cnbc.js';
 
 const EXT_WINDOW = 18 * 3600;
 
@@ -156,7 +156,8 @@ async function run({ force = false } = {}) {
   const todo = force ? syms : syms.filter(y => !(now - (miss[y] || 0) < REFRESH.stockMissBackoffMs));
   let ok = 0, fail = 0;
   await pool(todo, 3, async y => {
-    const q = await withLastPost(y, await quoteFor(y));
+    const fresh = await withLastPost(y, await quoteFor(y));
+    const q = marketOf(y) === 'us' ? newestExt(fresh, state.cache.stockPrices[y]) : fresh;
     if (q) {
       state.cache.stockPrices[y] = { ...q, ts: Date.now() };
       for (const p of [...state.positions, ...state.watchlist]) if (p.quoteSymbol === y) p.quoteCur = q.cur;
@@ -166,9 +167,23 @@ async function run({ force = false } = {}) {
     else { miss[y] = Date.now(); fail++; }
   });
   if (ok) state.cache.stockUpdated = Date.now();
-  const us = syms.filter(y => marketOf(y) === 'us' && state.cache.stockPrices[y]);
-  if (us.length) mergeExtended(state.cache.stockPrices, await cnbcExtended(us, viaProxies).catch(() => ({})));
+  const us = usHeld();
+  if (us.length) mergeExtended(state.cache.stockPrices, await cnbcExtended(us, viaProxies, Date.now(), { closed: true }).catch(() => ({})));
   return { ok, fail, total: syms.length };
+}
+
+const usHeld = () => [...new Set([...state.positions, ...state.watchlist]
+  .filter(p => p.kind === 'stock' && marketOf(p.quoteSymbol) === 'us' && state.cache.stockPrices[p.quoteSymbol])
+  .map(p => p.quoteSymbol))];
+
+/**
+ * Entre as atualizações das ações, a cada minuto: só o pré/pós-mercado da CNBC (um pedido por 10 ações).
+ * Só com atalho próprio — os intermediários públicos não aguentam tantos pedidos.
+ */
+export async function refreshExtended(now = Date.now()) {
+  const us = usHeld();
+  if (!us.length || !(state.settings.proxyUrl || '').trim()) return 0;
+  return mergeExtended(state.cache.stockPrices, await cnbcExtended(us, viaProxies, now), now);
 }
 
 /** Futuros dos índices dos teus ETFs (e do S&P 500), só fora do horário normal dos EUA. */

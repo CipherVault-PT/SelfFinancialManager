@@ -51,13 +51,14 @@ export function extPanel(now = Date.now()) {
   const d = disp(), withExt = rows.filter(r => r.e), total = withExt.reduce((s, r) => s + r.effect, 0);
   const phase = st.phase === 'pre' || st.phase === 'post' ? st.phase : withExt[0]?.e.phase ?? 'post';
   const label = phase === 'pre' ? '🌅 Pré-mercado dos EUA' : '🌙 Pós-mercado dos EUA';
-  const sub = st.phase === 'pre' ? `abre às ${hm(st.until)}` : st.phase === 'post' ? `até às ${hm(st.until)}` : `fechado · abre ${when(st.next?.open ?? now, now)}`;
+  const upd = state.cache.stockUpdated ? ` · dados das ${hm(state.cache.stockUpdated)}` : '';
+  const sub = (st.phase === 'pre' ? `abre às ${hm(st.until)}` : st.phase === 'post' ? `até às ${hm(st.until)}` : `fechado · abre ${when(st.next?.open ?? now, now)}`) + upd;
   const etfs = fut.flatMap(f => f.etfs);
   return `<div class="extp" role="region" aria-label="${label}">
     <div class="extp-h"><b>${label}</b><span class="muted">${esc(sub)}</span>
       ${withExt.length ? `<b class="mono extp-t ${upDown(total)}">${signed(total, money(total, d))}</b>` : ''}</div>
     ${rows.map(r => `<div class="extp-r">
-      <span class="extp-n">${esc(r.p.name)}<small>${esc(r.p.symbol || '')}${r.count > 1 ? ` · ${r.count} posições` : ''}</small></span>
+      <span class="extp-n">${esc(r.p.name)}<small>${esc(r.p.symbol || '')}${r.count > 1 ? ` · ${r.count} posições` : ''}${r.e ? ` · às ${hm(r.e.at)}` : ''}</small></span>
       ${r.e ? `<span class="mono">${price(r.e.price, r.m.nativeCur)}${r.e.phase !== phase ? '<small class="extp-tag">pós de ontem</small>' : ''}</span>
       <span class="mono ${upDown(r.e.pct)}">${pct(r.e.pct)}</span>
       <span class="mono ${upDown(r.effect)}">${signed(r.effect, money(r.effect, d))}</span>`
@@ -109,7 +110,7 @@ export function extLine(p, m) {
   const label = e.phase === 'pre' ? '🌅 Pré-mercado' : marketStatus('us').phase === 'pre' ? '🌙 Pós-mercado de ontem' : '🌙 Pós-mercado';
   return `<div class="extline">${label}
     <b class="mono">${price(e.price, m.nativeCur)}</b> <span class="${e.pct >= 0 ? 'up' : 'down'}">${pct(e.pct)}</span>
-    <span class="muted">· ${signed(delta, money(delta, p.currency))}</span></div>`;
+    <span class="muted">· ${signed(delta, money(delta, p.currency))} · às ${hm(e.at)}</span></div>`;
 }
 
 const range = (a, b) => `${hm(a)}–${hm(b)}`;

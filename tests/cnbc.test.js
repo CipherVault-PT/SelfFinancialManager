@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state } from '../js/store.js';
-import { cnbcUrl, parseCnbc, mergeExtended, cnbcExtended, isCnbc } from '../js/quotes/cnbc.js';
+import { cnbcUrl, parseCnbc, mergeExtended, cnbcExtended, isCnbc, newestExt } from '../js/quotes/cnbc.js';
 import { viaProxies } from '../js/quotes/stocks.js';
 import { reset, mockFetch } from './helpers.js';
 
@@ -47,7 +47,7 @@ test('CNBC + Yahoo: fica o negócio mais recente; preços absurdos são ignorado
     ZZB: { price: 50.2, phase: 'pre', at: at('2026-10-16T12:30:00Z'), src: 'cnbc' },
     ZZC: { price: 8.9, phase: 'pre', at: at('2026-10-16T12:32:00Z'), src: 'cnbc' },
     OOPS: { price: 100, phase: 'pre', at: at('2026-10-16T12:32:00Z'), src: 'cnbc' },
-  });
+  }, at('2026-10-16T12:40:00Z'));
   assert.equal(used, 2);
   assert.deepEqual([quotes.ZZA.ext.price, quotes.ZZA.ext.src, +quotes.ZZA.ext.pct.toFixed(2)], [20.4, 'cnbc', 2]);
   assert.equal(quotes.ZZB.ext.src, 'yahoo', 'o Yahoo tinha um negócio mais recente');
@@ -74,4 +74,39 @@ test('CNBC: só no pré/pós-mercado, só pelo atalho próprio e pausa 15 min se
   calls = mockFetch([['meu.workers.dev', formatted([])]]);
   await cnbcExtended(['ZZA'], viaProxies, pre + 16 * 60_000);
   assert.equal(calls.length, 1, 'passados 15 min volta a tentar');
+});
+
+test('pós-mercado: um negócio do pré-mercado da manhã já não conta (só depois do fecho)', () => {
+  const post = at('2026-10-16T21:30:00Z'); // 17:30 em Nova Iorque
+  const quotes = { ZZA: { price: 20 }, ZZB: { price: 50 } };
+  const used = mergeExtended(quotes, {
+    ZZA: { price: 21, phase: 'pre', at: at('2026-10-16T12:31:00Z'), src: 'cnbc' },
+    ZZB: { price: 50.5, phase: 'post', at: at('2026-10-16T21:20:00Z'), src: 'cnbc' },
+  }, post);
+  assert.equal(used, 1);
+  assert.equal(quotes.ZZA.ext, undefined);
+  assert.equal(quotes.ZZB.ext.price, 50.5);
+});
+
+test('nova cotação do Yahoo não apaga um negócio mais recente da CNBC (bug: no pós-mercado voltava ao preço do fecho)', () => {
+  const night = at('2026-10-17T00:30:00Z'); // 20:30 em Nova Iorque, pós-mercado acabado
+  const old = { price: 9, ext: { price: 8.95, phase: 'post', at: at('2026-10-16T23:58:00Z'), src: 'cnbc' } };
+  const yahoo = { price: 9, ext: { price: 9, phase: 'post', at: at('2026-10-16T20:00:00Z'), src: 'yahoo' } };
+  assert.equal(newestExt(yahoo, old, night).ext.src, 'cnbc');
+  assert.equal(newestExt({ price: 9 }, old, night).ext.price, 8.95, 'o Yahoo sem pós-mercado também não o apaga');
+  const newer = { price: 9, ext: { price: 8.9, phase: 'post', at: at('2026-10-16T23:59:00Z'), src: 'yahoo' } };
+  assert.equal(newestExt(newer, old, night).ext.price, 8.9);
+  assert.equal(newestExt({ price: 9 }, { ext: { price: 9.2, phase: 'pre', at: at('2026-10-16T12:00:00Z') } }, night).ext, undefined, 'antes do fecho: fora');
+  assert.equal(newestExt(null, old, night), null);
+});
+
+test('CNBC com a bolsa fechada: só quando pedido (dá o preço final do pós-mercado)', async () => {
+  reset({ settings: { proxyUrl: 'https://meu.workers.dev' } });
+  const night = at('2026-10-17T00:30:00Z');
+  const calls = mockFetch([['meu.workers.dev', formatted([{ symbol: 'ZZA', ExtendedMktQuote: ext('20.10', '2026-10-16T19:58:00.000-0400', { type: 'POST_MKT' }) }])]]);
+  assert.deepEqual(await cnbcExtended(['ZZA'], viaProxies, night), {});
+  assert.equal(calls.length, 0, 'por omissão, só no pré/pós-mercado');
+  const r = await cnbcExtended(['ZZA'], viaProxies, night, { closed: true });
+  assert.deepEqual([r.ZZA.price, r.ZZA.phase], [20.1, 'post']);
+  assert.deepEqual(await cnbcExtended(['ZZA'], viaProxies, at('2026-10-16T15:00:00Z'), { closed: true }), {}, 'nunca no horário normal');
 });
