@@ -1,5 +1,5 @@
 import { state } from '../store.js';
-import { marketStatus, extPhaseAt } from '../markets.js';
+import { marketStatus, extPhaseAt, lastClose } from '../markets.js';
 
 /**
  * Segunda fonte do pré/pós-mercado dos EUA: as cotações do site da CNBC (sem chave nem documentação oficial).
@@ -44,12 +44,14 @@ export function parseCnbc(d, syms = []) {
 }
 
 /**
- * Pede à CNBC o pré/pós-mercado das ações dos EUA indicadas (só fora do horário normal).
+ * Pede à CNBC o pré/pós-mercado das ações dos EUA indicadas: no pré e no pós-mercado e, com `closed`,
+ * também com a bolsa fechada (dá o preço final do pós-mercado). Nunca no horário normal.
  * Com atalho próprio só passa por ele (os intermediários públicos são lentos); se não responder, pausa 15 min.
  */
-export async function cnbcExtended(syms, viaProxies, now = Date.now()) {
+export async function cnbcExtended(syms, viaProxies, now = Date.now(), { closed = false } = {}) {
   const phase = marketStatus('us', now).phase;
-  if (!syms.length || (phase !== 'pre' && phase !== 'post') || now - (state.cache.cnbcFail || 0) < BACKOFF) return {};
+  const when = phase === 'pre' || phase === 'post' || (closed && phase === 'closed');
+  if (!syms.length || !when || now - (state.cache.cnbcFail || 0) < BACKOFF) return {};
   const publicFallback = !(state.settings.proxyUrl || '').trim();
   const out = {};
   let answered = false;
@@ -62,15 +64,22 @@ export async function cnbcExtended(syms, viaProxies, now = Date.now()) {
   return out;
 }
 
+/** Entre o pré/pós-mercado novo e o que estava guardado (ex.: da CNBC), fica o negócio mais recente desde o último fecho. */
+export function newestExt(q, old, now = Date.now()) {
+  const keep = old?.ext?.at >= lastClose('us', now) && (!q?.ext || old.ext.at > q.ext.at);
+  return keep && q ? { ...q, ext: old.ext } : q;
+}
+
 /**
  * Junta o pré/pós-mercado da CNBC ao do Yahoo: fica o negócio mais recente.
- * Ignora preços absurdos (mais de 50% longe do fecho) e o que for de outro dia que não o atual.
+ * Ignora preços absurdos (mais de 50% longe do fecho) e negócios anteriores ao último fecho.
  */
-export function mergeExtended(quotes, cnbc) {
+export function mergeExtended(quotes, cnbc, now = Date.now()) {
   let used = 0;
+  const since = lastClose('us', now);
   for (const [y, c] of Object.entries(cnbc)) {
     const q = quotes[y];
-    if (!(q?.price > 0) || Math.abs(c.price / q.price - 1) > 0.5) continue;
+    if (!(q?.price > 0) || Math.abs(c.price / q.price - 1) > 0.5 || c.at < since) continue;
     if (q.ext && q.ext.at >= c.at) continue;
     q.ext = { ...c, pct: ((c.price - q.price) / q.price) * 100 };
     used++;

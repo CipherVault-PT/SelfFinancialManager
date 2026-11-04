@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state } from '../js/store.js';
-import { MARKETS, easter, marketOf, marketStatus, sessionOn, isTradingDay, noteSession, extFromChart, extQuote, marketsHeld, zoned, extRows, trackedIndex, futuresWanted, futuresTime, futureQuote } from '../js/markets.js';
+import { MARKETS, easter, marketOf, marketStatus, sessionOn, isTradingDay, noteSession, extFromChart, extQuote, marketsHeld, zoned, extRows, trackedIndex, futuresWanted, futuresTime, futureQuote, lastClose } from '../js/markets.js';
 import { fetchFutures, withLastPost, yahooChartUrl } from '../js/quotes/stocks.js';
 import { parseYahooChart } from '../js/quotes/stocks.js';
 import { reset, stockPos, lot, mockFetch } from './helpers.js';
@@ -217,4 +217,16 @@ test('pré-mercado: pede uma janela explícita de 18 h (o "dia" do Yahoo antes d
     timestamp: [t('2026-10-15T19:55:00Z'), t('2026-10-15T22:30:00Z'), t('2026-10-16T08:15:00Z')],
     indicators: { quote: [{ close: [7, 7.1, 7.4] }] } }], error: null } };
   assert.deepEqual([extFromChart(d, 7).phase, extFromChart(d, 7).price], ['pre', 7.4]);
+});
+
+test('pré/pós-mercado: só negócios depois do último fecho, com a variação face ao fecho atual', () => {
+  reset();
+  const q = state.cache.stockPrices.ZZA = { price: 20, cur: 'USD', ext: { price: 21, pct: 99, phase: 'pre', at: at('2026-10-16T12:31:00Z') } };
+  assert.equal(lastClose('us', at('2026-10-16T12:40:00Z')), at('2026-10-15T20:00:00Z'));
+  assert.equal(lastClose('us', at('2026-10-16T21:30:00Z')), at('2026-10-16T20:00:00Z'));
+  assert.equal(extQuote('ZZA', at('2026-10-16T12:40:00Z')).pct, 5, 'recalculada face ao fecho guardado');
+  assert.equal(extQuote('ZZA', at('2026-10-16T21:30:00Z')), null, 'no pós-mercado, o pré da manhã não aparece');
+  q.ext = { price: 19.8, phase: 'post', at: at('2026-10-16T21:10:00Z') };
+  assert.equal(+extQuote('ZZA', at('2026-10-16T21:30:00Z')).pct.toFixed(6), -1);
+  assert.equal(extQuote('ZZA', at('2026-10-17T03:00:00Z')).phase, 'post', 'de madrugada continua o pós de ontem');
 });
