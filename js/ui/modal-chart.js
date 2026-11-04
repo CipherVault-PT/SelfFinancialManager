@@ -1,6 +1,6 @@
 import { state } from '../store.js';
 import { avgDisp } from '../calc.js';
-import { RANGES, fetchChart } from '../quotes/chart.js';
+import { RANGES, fetchChart, fetchCoinChart } from '../quotes/chart.js';
 import { marketOf, extPhaseAt, dayWord } from '../markets.js';
 import { esc, money, price, pct, signed, units } from '../format.js';
 import { $, openModal, modalOpen } from './dom.js';
@@ -29,19 +29,22 @@ const LOOK = {
 const W = 680, H = 220, PAD = 10;
 let lastRange = '1d', view = null, timer = 0;
 
-/** Gráfico de uma posição (ação ou ETF com símbolo do Yahoo). */
+/** Gráfico de uma posição: ação ou ETF (Yahoo) ou cripto (CoinGecko/Binance). */
 export function modalChart(id) {
   const p = state.positions.find(x => x.id === id);
-  if (!p?.quoteSymbol) return;
+  const coin = p?.kind === 'crypto' && p.coingeckoId ? { id: p.coingeckoId, symbol: p.symbol, cur: p.currency } : null;
+  if (!p || (!coin && !p.quoteSymbol)) return;
   const ad = avgDisp(p);
-  open({ y: p.quoteSymbol, name: p.name, sub: `${p.symbol || p.quoteSymbol} · ${p.platform}`, avg: ad.value > 0 ? ad : null, lots: p.lots ?? [] });
+  open({ y: coin ? null : p.quoteSymbol, coin, name: p.name, sub: `${p.symbol || p.quoteSymbol} · ${p.platform}`, avg: ad.value > 0 ? ad : null, lots: p.lots ?? [] });
 }
 
 /** Gráfico de um ativo da lista "A seguir". */
 export function modalWatchChart(id) {
   const w = state.watchlist.find(x => x.id === id);
-  if (!w?.quoteSymbol) return;
-  open({ y: w.quoteSymbol, name: w.name, sub: w.quoteSymbol, target: w.target > 0 ? { value: w.target, cur: w.quoteCur } : null });
+  const coin = w?.kind === 'crypto' && w.coingeckoId ? { id: w.coingeckoId, symbol: w.symbol, cur: w.cur } : null;
+  if (!w || (!coin && !w.quoteSymbol)) return;
+  open({ y: coin ? null : w.quoteSymbol, coin, name: w.name, sub: coin ? w.symbol : w.quoteSymbol,
+    target: w.target > 0 ? { value: w.target, cur: coin ? w.cur : w.quoteCur } : null });
 }
 
 function open(v) {
@@ -68,11 +71,11 @@ function open(v) {
 async function load(showLoading) {
   const my = ++view.token, range = lastRange, v = view;
   if (showLoading) $('#chBody').innerHTML = '<div class="ch-load">A carregar o gráfico…</div>';
-  const data = await fetchChart(v.y, range).catch(() => null);
+  const data = await (v.coin ? fetchCoinChart(v.coin, range) : fetchChart(v.y, range)).catch(() => null);
   const body = $('#chBody');
   if (my !== v.token || v !== view || !body) return;
   if (!data) {
-    if (showLoading) body.innerHTML = '<div class="ch-load">Sem dados agora — o Yahoo não respondeu. Tenta outra vez daqui a pouco.</div>';
+    if (showLoading) body.innerHTML = `<div class="ch-load">Sem dados agora — ${v.coin ? 'a CoinGecko e a Binance não responderam' : 'o Yahoo não respondeu'}. Tenta outra vez daqui a um minuto.</div>`;
     return;
   }
   body.innerHTML = draw(v, data, range);
@@ -95,7 +98,7 @@ function scale(v, data, range) {
   lo -= span * 0.04; hi += span * 0.04;
   const n = data.pts.length;
   return {
-    min: Math.min(...vals), max: Math.max(...vals), refs: shown,
+    min: Math.min(...vals), max: Math.max(...vals), refs: shown, lo, hi,
     X: i => (i / (n - 1)) * W,
     Y: val => PAD + (1 - (val - lo) / (hi - lo)) * (H - 2 * PAD),
   };
@@ -126,7 +129,8 @@ function buyDots(v, data, sc, range) {
     if (!Number.isFinite(t) || t < t0 - 86_400_000 || t > tN + 86_400_000) return [];
     let i = data.pts.findIndex(p => p[0] >= t - 43_200_000);
     if (i < 0) i = data.pts.length - 1;
-    const at = l.priceQ > 0 && l.priceCur === data.cur ? l.priceQ : data.pts[i][1];
+    const own = l.priceQ > 0 && l.priceCur === data.cur && l.priceQ >= sc.lo && l.priceQ <= sc.hi;
+    const at = own ? l.priceQ : data.pts[i][1];
     const tip = `Compra ${l.date}: ${units(l.shares)}${l.priceQ > 0 ? ` a ${price(l.priceQ, l.priceCur || data.cur)}` : ''}`;
     return [`<i class="ch-buy" style="left:${(sc.X(i) / W) * 100}%;top:${(sc.Y(at) / H) * 100}%" title="${esc(tip)}"></i>`];
   }).join('');
@@ -164,6 +168,7 @@ function draw(v, data, range) {
     <div class="chart-axis"><span>${esc(look.axis.format(pts[0][0]))}</span><span>${esc(look.axis.format(mid))}</span><span>${esc(look.axis.format(pts.at(-1)[0]))}</span></div>
     <div class="ch-stats">${stats.map(s => `<span>${s}</span>`).join('')}</div>
     ${ext ? '<div class="ch-note">Zonas sombreadas: pré e pós-mercado.</div>' : ''}
+    ${v.coin ? `<div class="ch-note">Fonte: ${data.src === 'binance' ? 'Binance' : 'CoinGecko'}${data.approx ? ' — preços em dólares convertidos ao câmbio de hoje (aproximado)' : ''}${data.capped ? ' — só há o último ano para esta moeda' : ''}.</div>` : ''}
     ${v.lots?.length && range !== '1d' ? '<div class="ch-note">Os pontos dourados são as tuas compras.</div>' : ''}`;
 }
 
@@ -177,7 +182,7 @@ function wire(body, v, data, range) {
     $('#chPx', body).textContent = price(p, data.cur);
     const chg = $('#chChg', body);
     chg.className = `ch-chg ${d >= 0 ? 'up' : 'down'}`;
-    const when = isLast ? (range === '1d' ? dayWord(t) : look.name) : look.tip.format(t);
+    const when = isLast ? (range !== '1d' ? (data.capped ? '1 ano' : look.name) : v.coin ? '24 h' : dayWord(t)) : look.tip.format(t);
     chg.innerHTML = `${signed(d, money(d, data.cur))} · ${pct(base > 0 ? (d / base) * 100 : 0)} <span>${esc(when)}</span>`;
   };
   const move = e => {
