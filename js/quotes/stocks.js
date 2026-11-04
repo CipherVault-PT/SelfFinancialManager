@@ -31,7 +31,7 @@ const PUBLIC_PROXIES = [
 ];
 
 /** Moedas cotadas em subunidades (ex: pence) → moeda principal. */
-const SUBUNITS = { GBp: ['GBP', 100], GBX: ['GBP', 100], ZAc: ['ZAR', 100], ILA: ['ILS', 100] };
+export const SUBUNITS = { GBp: ['GBP', 100], GBX: ['GBP', 100], ZAc: ['ZAR', 100], ILA: ['ILS', 100] };
 
 export function validProxyUrl(s) {
   try {

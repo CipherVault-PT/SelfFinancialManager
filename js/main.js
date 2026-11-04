@@ -6,6 +6,7 @@ import { renderAll, renderStatus, renderView, renderMarkets, rebalanceTable, ui 
 import { modalMarkets } from './ui/markets-ui.js';
 import { modalWatchAdd, modalWatchEdit, watchBuy, watchDelete } from './ui/watch-ui.js';
 import { modalJournal, modalTrade } from './ui/modal-journal.js';
+import { modalChart, modalWatchChart } from './ui/modal-chart.js';
 import { $, $$, toast, closeModal, modalOpen } from './ui/dom.js';
 import { applyAccent } from './ui/theme.js';
 import { initBackground } from './ui/background.js';
@@ -75,6 +76,8 @@ const ACTIONS = {
   'watch-del': watchDelete,
   journal: modalJournal,
   trade: modalTrade,
+  chart: modalChart,
+  'watch-chart': modalWatchChart,
   'journal-period': (_, el) => { ui.journalPeriod = el.dataset.p; renderView(); },
   'modal-close': closeModal,
   'go-positions': () => switchTab('posicoes'),

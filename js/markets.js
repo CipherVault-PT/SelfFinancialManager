@@ -197,15 +197,18 @@ const localDay = ts => { const d = new Date(ts); return Date.UTC(d.getFullYear()
 /** Dois instantes no mesmo dia, na hora do dispositivo. */
 export const sameDay = (a, b) => localDay(a) === localDay(b);
 
-/** Última sessão de uma bolsa que já tinha aberto às `t`. */
-function lastSession(id, t) {
+/** Última sessão de uma bolsa que já tinha aberto às `t` (com `withPre`, contando o pré-mercado). */
+function lastSession(id, t, withPre = false) {
   const today = dateIn(t, MARKETS[id].tz);
   for (let i = 0; i <= 10; i++) {
     const s = sessionOn(id, addDays(today, -i));
-    if (s && s.open <= t) return s;
+    if (s && (withPre ? s.pre ?? s.open : s.open) <= t) return s;
   }
   return null;
 }
+
+/** Sessão do gráfico de 1 dia: a de hoje, se já começou (nos EUA, com o pré-mercado), senão a anterior. */
+export const latestSession = (id, now = Date.now()) => lastSession(id, now, true);
 
 /**
  * Quando foi o movimento que a variação do dia de uma ação mostra: a hora do último negócio no horário
