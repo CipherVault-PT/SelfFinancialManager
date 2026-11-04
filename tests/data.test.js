@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { STOCKS, byQuote, resolveStock, twelveDataSymbol, micOf, searchLocal } from '../js/stocks.js';
+import { STOCKS, byQuote, resolveStock, twelveDataSymbol, micOf, searchLocal, currencyOfSymbol } from '../js/stocks.js';
 import { moneyParts, money, pct, num, todayISO, esc, inputNum } from '../js/format.js';
 
 test('base de ações: símbolos Yahoo únicos e moedas válidas', () => {
@@ -37,6 +37,30 @@ test('Twelve Data: símbolo e MIC', () => {
 test('pesquisa local dá prioridade a correspondências no início', () => {
   assert.equal(searchLocal('galp')[0].y, 'GALP.LS');
   assert.equal(searchLocal('AAPL')[0].y, 'AAPL');
+});
+
+test('pesquisa local: nome como na corretora ("… USD (Acc)") e ISIN encontram as versões em €', () => {
+  assert.equal(searchLocal('FTSE All-World USD (Acc)')[0].y, 'VWCE.DE');
+  assert.deepEqual(searchLocal(' ie00b5bmr087 ').map(s => s.y), ['SXR8.DE', 'CSPX.L']);
+  assert.ok(searchLocal('core s&p 500 usd acc').some(s => s.y === 'SXR8.DE'));
+  assert.deepEqual(searchLocal('usd'), searchLocal('usd'), 'só palavras ignoradas: não rebenta');
+  assert.equal(searchLocal('zzzz qqqq').length, 0);
+});
+
+test('base de ações: ISIN com dígito de controlo válido', () => {
+  const ok = isin => {
+    const digits = [...isin.slice(0, -1)].map(c => parseInt(c, 36)).join('');
+    let sum = 0;
+    [...digits].reverse().forEach((ch, i) => { let d = +ch; if (i % 2 === 0) { d *= 2; if (d > 9) d -= 9; } sum += d; });
+    return (10 - (sum % 10)) % 10 === +isin.at(-1);
+  };
+  const withIsin = STOCKS.filter(s => s.i);
+  assert.ok(withIsin.length >= 10);
+  for (const s of withIsin) assert.ok(/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(s.i) && ok(s.i), `${s.y}: ${s.i}`);
+});
+
+test('moeda pelo sufixo do símbolo: Xetra/Amsterdão em €, EUA em $, Londres ambígua', () => {
+  assert.deepEqual(['EUNL.DE', 'IWDA.AS', 'ZZA', 'ZZW.L', 'ZZW.SW', 'ES=F', 'ZZN.CO'].map(currencyOfSymbol), ['EUR', 'EUR', 'USD', null, null, null, 'DKK']);
 });
 
 test('formatação: valor grande em USD sem "US" e com separador de milhares', () => {

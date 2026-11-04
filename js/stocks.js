@@ -46,15 +46,44 @@ export function resolveStock(symbol, exchange) {
   return direct ?? null;
 }
 
+/** Palavras que não ajudam a distinguir ETFs (a moeda base do fundo não é a moeda em que cota). */
+const NOISE = new Set(['usd', 'eur', 'gbp', 'chf', 'acc', 'dist', 'ucits', 'etf', 'accumulating', 'distributing']);
+const ISIN = /^[A-Z]{2}[A-Z0-9]{9}\d$/;
+const fold = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const words = s => fold(s).split(/[^a-z0-9&]+/).filter(Boolean);
+let WORDS = null;
+
+/**
+ * Pesquisa na base local: ticker ou nome a começar pelo texto, depois a contê-lo e, por fim,
+ * todas as palavras (ex.: "… USD (Acc)", como algumas corretoras escrevem). Aceita o ISIN.
+ */
 export function searchLocal(q, limit = 8) {
-  const ql = q.trim().toLowerCase();
+  const ql = fold(q.trim());
   if (!ql) return [];
-  const starts = [], contains = [];
-  for (const s of STOCKS) {
-    const t = s.t.toLowerCase(), n = s.n.toLowerCase();
+  const isin = q.trim().toUpperCase();
+  if (ISIN.test(isin)) return STOCKS.filter(s => s.i === isin).slice(0, limit);
+  const qw = words(ql).filter(w => !NOISE.has(w));
+  WORDS ??= STOCKS.map(s => words(`${s.n} ${s.t}`));
+  const starts = [], contains = [], all = [];
+  STOCKS.forEach((s, i) => {
+    if (starts.length >= limit) return;
+    const t = s.t.toLowerCase(), n = fold(s.n);
     if (t === ql || t.startsWith(ql) || n.startsWith(ql)) starts.push(s);
     else if (n.includes(ql) || t.includes(ql)) contains.push(s);
-    if (starts.length >= limit) break;
-  }
-  return [...starts, ...contains].slice(0, limit);
+    else if (qw.length && qw.every(w => WORDS[i].some(x => x.startsWith(w)))) all.push(s);
+  });
+  return [...starts, ...contains, ...all].slice(0, limit);
+}
+
+const SUFFIX_CUR = {
+  '.DE': 'EUR', '.F': 'EUR', '.SG': 'EUR', '.DU': 'EUR', '.MU': 'EUR', '.HM': 'EUR', '.BE': 'EUR', '.AS': 'EUR', '.PA': 'EUR',
+  '.MI': 'EUR', '.MC': 'EUR', '.LS': 'EUR', '.BR': 'EUR', '.IR': 'EUR', '.VI': 'EUR', '.HE': 'EUR',
+  '.CO': 'DKK', '.ST': 'SEK', '.OL': 'NOK',
+};
+
+/** Moeda em que um símbolo Yahoo cota, quando a bolsa só tem uma (Londres e Zurique têm várias: null). */
+export function currencyOfSymbol(y) {
+  if (!y || /[=^]/.test(y)) return null;
+  const m = /\.[A-Z]{1,3}$/.exec(y);
+  return m ? SUFFIX_CUR[m[0]] ?? null : 'USD';
 }

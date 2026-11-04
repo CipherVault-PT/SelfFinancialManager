@@ -9,7 +9,8 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Cripto ao vivo**: CoinGecko, com a Binance como reserva quando a CoinGecko limita pedidos.
 - **Ações e ETFs ao vivo**: Yahoo Finance, através do teu atalho Cloudflare ou de intermediários públicos, com a Twelve Data como reserva opcional. Inclui:
   - pesquisa nas ~1800 ações/ETFs da base local: S&P 500, S&P 600, Nasdaq-100, as principais bolsas europeias (DAX/MDAX/SDAX/TecDAX, CAC 40, FTSE 100, IBEX 35, FTSE MIB, AEX, BEL 20, SMI, nórdicas, Áustria, Irlanda, PSI) e ADRs/ações populares, todas com setor e país;
-  - pesquisa global no Yahoo, para qualquer ticker do mundo;
+  - pesquisa global no Yahoo, para qualquer ticker do mundo, com a moeda de cada bolsa;
+  - aceita o nome como aparece na corretora (ex.: "… USD (Acc)") e o **ISIN** dos ETFs principais. O "USD" no nome de um ETF é a moeda do fundo, não a da cotação: na Trade Republic escolhe a versão em € (Xetra, `.DE`) — a app avisa se escolheres outra;
   - preço pré-preenchido ao escolher a ação.
 - **Câmbio do BCE** (Frankfurter) para EUR, USD, GBP, CHF, DKK e outras.
 - **Taxa de conversão da XTB** (0,5%) aplicada na compra e na venda; a Revolut e a Trade Republic ficam isentas.
