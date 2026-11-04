@@ -173,6 +173,7 @@ function positionCard(p) {
         <button class="btn" data-action="close" data-id="${id}">Vender</button>
       </div>
       <div class="acts-ic">
+      ${isStock && p.quoteSymbol ? `<button class="btn xic" data-action="chart" data-id="${id}" title="Gráfico" aria-label="Gráfico da cotação">📈</button>` : ''}
       <button class="btn xic ${validPlan(p.plan) ? 'on' : ''}" data-action="plan" data-id="${id}" title="Plano mensal" aria-label="Plano de poupança mensal">🔁</button>
       ${isStock ? `<button class="btn xic ${divNet ? 'on' : ''}" data-action="dividend" data-id="${id}" title="Dividendos" aria-label="Dividendos">💰</button>` : ''}
       <button class="btn xic ${p.journal ? 'on' : ''}" data-action="journal" data-id="${id}" title="Diário: tese, alvo e stop" aria-label="Diário da posição">📓</button>

@@ -38,6 +38,7 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Efeito do câmbio**: nas ações cotadas noutra moeda, o resultado aparece separado em **ação** (quanto subiu ou desceu na moeda dela) e **câmbio** (o que a moeda mudou desde as compras, mais as taxas de conversão). No painel, por moeda: câmbio médio das compras vs o de hoje. Usa o preço em moeda estrangeira de cada compra ou, sem ele, o câmbio do BCE nesse dia.
 - **A seguir (watchlist)**: ações, ETFs e cripto que ainda não tens — preço ao vivo, variação do dia, pré/pós-mercado, variação desde que começaste a seguir, nota e **preço-alvo** (descer até / subir até) com aviso quando lá chega. "Comprar" abre a nova posição já preenchida e tira o ativo da lista. Sincroniza e entra no backup.
 - **Diário de trades**: em cada posição, a **tese** (porque compraste), o **alvo** e o **stop** — com a distância ao preço atual, quanto ganhas face ao que arriscas e, se quiseres, alertas nesses preços. Ao vender, a app mostra o plano e pede uma nota. No Histórico, estatísticas por ano / 12 meses / tudo: taxa de acerto, ganho e perda médios, rácio ganho ÷ perda, profit factor, resultado por trade, tempo médio (ganhos vs perdas), melhor e pior — e avisos como "seguras as perdas mais tempo do que os ganhos" (a partir de 5 vendas).
+- **Gráfico de cada ação/ETF** (📈 no cartão e na lista "A seguir"): 1D por minuto (nos EUA com pré e pós-mercado sombreados e o fecho anterior), 1S e 1M por hora, 6M e 1A por dia, 5A por semana e Máx por mês. Arrasta o dedo para ver o preço e a hora de cada ponto; mostra o teu preço médio, as tuas compras e o preço-alvo. O 1D atualiza-se sozinho a cada minuto.
 - **Alertas de preço** com notificações.
 - **Gráfico da evolução do património** (1M / 3M / 1A / Tudo).
 - Funciona offline com os últimos dados (service worker).
@@ -98,7 +99,7 @@ js/
   data/stocks.js        base local de ações e ETFs (símbolo Yahoo único)
   data/stocks-world.js  restantes ações dos EUA e da Europa (gerado a partir das listas dos índices)
   data/classification.js setores, países e classificação das ações europeias e temáticas
-  quotes/               cotações: crypto.js, stocks.js e index.js (orquestração)
+  quotes/               cotações: crypto.js, stocks.js, chart.js (gráficos) e index.js (orquestração)
   ui/                   render, modais, formulário de entradas, tema, fundo animado
   pwa.js                instalação e service worker
   sync/                 sincronização: crypto.js (cifra) e engine.js (enviar, receber, conflitos)
