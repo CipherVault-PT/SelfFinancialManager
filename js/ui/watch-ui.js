@@ -47,7 +47,7 @@ function watchRow(w) {
     <div class="pos-act">
       <div class="acts-main"><button class="btn ghost" data-action="watch-buy" data-id="${id}">＋ Comprar</button>
         <button class="btn ghost" data-action="watch-edit" data-id="${id}">🎯 Alvo e nota</button></div>
-      <div class="acts-ic">${w.kind === 'stock' && w.quoteSymbol ? `<button class="btn xic" data-action="watch-chart" data-id="${id}" title="Gráfico" aria-label="Gráfico da cotação">📈</button>` : ''}<button class="btn xic" data-action="watch-del" data-id="${id}" title="Deixar de seguir" aria-label="Deixar de seguir">✕</button></div>
+      <div class="acts-ic">${(w.kind === 'stock' ? w.quoteSymbol : w.coingeckoId) ? `<button class="btn xic" data-action="watch-chart" data-id="${id}" title="Gráfico" aria-label="Gráfico da cotação">📈</button>` : ''}<button class="btn xic" data-action="watch-del" data-id="${id}" title="Deixar de seguir" aria-label="Deixar de seguir">✕</button></div>
     </div>
   </article>`;
 }
