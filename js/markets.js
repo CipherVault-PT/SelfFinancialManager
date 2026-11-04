@@ -323,6 +323,15 @@ export function extRows(positions = state.positions, now = Date.now()) {
   return [...bySym.values()].sort((a, b) => size(b) - size(a));
 }
 
+/**
+ * Sessão noturna dos EUA (Blue Ocean ATS, 20:00–4:00 de Nova Iorque, de domingo a quinta): { from, to } se for agora.
+ * As fontes gratuitas da app (Yahoo, CNBC) não a têm; o Investing mostra-a com o mesmo ícone do pós-mercado.
+ */
+export function overnightNow(now = Date.now()) {
+  const st = marketStatus('us', now), pre = st.phase === 'closed' ? st.next?.pre : null;
+  return pre && pre - now <= 8 * 3600_000 ? { from: pre - 8 * 3600_000, to: pre } : null;
+}
+
 /** Futuros dos índices dos EUA: antes da abertura indicam para onde vão os ETFs desses índices cotados na Europa. */
 export const FUTURES = { sp500: { y: 'ES=F', name: 'S&P 500' }, ndx: { y: 'NQ=F', name: 'Nasdaq 100' } };
 

@@ -1,6 +1,6 @@
 import { state } from '../store.js';
 import { conv, disp } from '../fx.js';
-import { MARKETS, marketStatus, marketsHeld, extQuote, extRows, FUTURES, trackedIndex, futuresWanted, futuresTime, futureQuote, marketOf, notToday } from '../markets.js';
+import { MARKETS, marketStatus, marketsHeld, extQuote, extRows, FUTURES, trackedIndex, futuresWanted, futuresTime, futureQuote, marketOf, notToday, overnightNow } from '../markets.js';
 import { esc, money, price, pct, signed } from '../format.js';
 import { openModal } from './dom.js';
 
@@ -49,6 +49,7 @@ export function extPanel(now = Date.now()) {
   const rows = extRows(state.positions, now), fut = futuresNow(now);
   if (!rows.length && !fut.length) return '';
   const d = disp(), withExt = rows.filter(r => r.e), total = withExt.reduce((s, r) => s + r.effect, 0);
+  const night = withExt.some(r => r.e.phase === 'post') ? overnightNow(now) : null;
   const phase = st.phase === 'pre' || st.phase === 'post' ? st.phase : withExt[0]?.e.phase ?? 'post';
   const label = phase === 'pre' ? '🌅 Pré-mercado dos EUA' : '🌙 Pós-mercado dos EUA';
   const upd = state.cache.stockUpdated ? ` · dados das ${hm(state.cache.stockUpdated)}` : '';
@@ -65,6 +66,7 @@ export function extPanel(now = Date.now()) {
       : `<span class="mono">${price(r.m.nativePrice, r.m.nativeCur)}</span><span class="extp-none">ainda sem negócios</span>`}</div>`).join('')}
     ${fut.length ? `<div class="extp-f">📈 Futuros ${fut.map(f => `${esc(f.name)} <b class="${upDown(f.q.dayPct)}">${pct(f.q.dayPct)}</b>`).join(' · ')}
       <span class="muted">— ${etfs.length ? `indicam como podem abrir os teus ETFs (${esc(etfs.join(', '))})` : 'indicam como pode abrir o mercado'}</span></div>` : ''}
+    ${night ? `<div class="extp-note">🌃 Das ${hm(night.from)} às ${hm(night.to)} há a <b>sessão noturna</b> dos EUA (Blue Ocean). As fontes da app não a têm: aqui fica o último preço do pós-mercado. O Investing mostra a sessão noturna com o mesmo ícone 🌙 — por isso os valores podem ser diferentes.</div>` : ''}
     <div class="extp-note">Fora do horário normal há menos volume e os preços mexem mais. O valor da carteira conta com o preço do horário normal.</div>
   </div>`;
 }
@@ -107,7 +109,8 @@ export function extLine(p, m) {
   }
   if (!m.live) return '';
   const delta = conv(m.u * (e.price - m.nativePrice), m.nativeCur, p.currency);
-  const label = e.phase === 'pre' ? '🌅 Pré-mercado' : marketStatus('us').phase === 'pre' ? '🌙 Pós-mercado de ontem' : '🌙 Pós-mercado';
+  const label = e.phase === 'pre' ? '🌅 Pré-mercado' : marketStatus('us').phase === 'pre' ? '🌙 Pós-mercado de ontem'
+    : overnightNow() ? '🌙 Fecho do pós-mercado' : '🌙 Pós-mercado';
   return `<div class="extline">${label}
     <b class="mono">${price(e.price, m.nativeCur)}</b> <span class="${e.pct >= 0 ? 'up' : 'down'}">${pct(e.pct)}</span>
     <span class="muted">· ${signed(delta, money(delta, p.currency))} · às ${hm(e.at)}</span></div>`;
