@@ -2,7 +2,7 @@ import { REFRESH } from '../config.js';
 import { state } from '../store.js';
 import { fetchJSON, pool } from '../net.js';
 import { isCurrency } from '../format.js';
-import { micOf, twelveDataSymbol } from '../stocks.js';
+import { micOf, twelveDataSymbol, currencyOfSymbol } from '../stocks.js';
 import { marketOf, marketStatus, noteSession, extFromChart, FUTURES, futuresWanted, futuresTime } from '../markets.js';
 import { cnbcExtended, mergeExtended } from './cnbc.js';
 
@@ -195,7 +195,7 @@ export async function searchYahoo(q) {
       t: x.symbol,
       x: [x.exchDisp, x.typeDisp].filter(Boolean).join(' · '),
       y: x.symbol,
-      c: null,
+      c: x.quoteType === 'MUTUALFUND' ? null : currencyOfSymbol(x.symbol),
       online: true,
     }));
 }

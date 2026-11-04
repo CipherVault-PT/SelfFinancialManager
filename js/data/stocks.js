@@ -1,21 +1,21 @@
 /**
  * Base de dados local de ações e ETFs.
- * n: nome · t: ticker mostrado · x: setor ou bolsa · c: moeda de cotação · y: símbolo Yahoo (chave única)
+ * n: nome · t: ticker mostrado · x: setor ou bolsa · c: moeda de cotação · y: símbolo Yahoo (chave única) · i: ISIN (ETFs)
  */
 export const STOCKS = [
   // ETFs
-  {n:"iShares Core S&P 500 UCITS (Xetra)",t:"SXR8",x:"ETF · S&P 500 (UE)",c:"EUR",y:"SXR8.DE"},
-  {n:"Vanguard S&P 500 UCITS (Dist)",t:"VUSA",x:"ETF · S&P 500 (UE)",c:"EUR",y:"VUSA.AS"},
-  {n:"Vanguard FTSE All-World UCITS (Acc)",t:"VWCE",x:"ETF · Global (UE)",c:"EUR",y:"VWCE.DE"},
-  {n:"iShares Core MSCI World UCITS",t:"IWDA",x:"ETF · Global (UE)",c:"EUR",y:"IWDA.AS"},
-  {n:"iShares Core MSCI World UCITS (Xetra)",t:"EUNL",x:"ETF · Global (UE)",c:"EUR",y:"EUNL.DE"},
-  {n:"iShares Core MSCI EM IMI UCITS",t:"IS3N",x:"ETF · Emergentes (UE)",c:"EUR",y:"IS3N.DE"},
-  {n:"Invesco QQQ Trust",t:"QQQ",x:"ETF · Nasdaq-100 (EUA)",c:"USD",y:"QQQ"},
-  {n:"SPDR S&P 500 ETF",t:"SPY",x:"ETF · S&P 500 (EUA)",c:"USD",y:"SPY"},
-  {n:"Vanguard S&P 500 ETF",t:"VOO",x:"ETF · S&P 500 (EUA)",c:"USD",y:"VOO"},
-  {n:"Vanguard S&P 500 UCITS (Acc)",t:"VUAA",x:"ETF · S&P 500 (UE)",c:"EUR",y:"VUAA.DE"},
-  {n:"SPDR S&P 500 UCITS (SPYL)",t:"SPYL",x:"ETF · S&P 500 (UE)",c:"EUR",y:"SPYL.DE"},
-  {n:"iShares Core S&P 500 UCITS",t:"CSPX",x:"ETF · S&P 500 (Londres)",c:"USD",y:"CSPX.L"},
+  {n:"iShares Core S&P 500 UCITS (Xetra)",t:"SXR8",x:"ETF · S&P 500 (UE)",c:"EUR",y:"SXR8.DE",i:"IE00B5BMR087"},
+  {n:"Vanguard S&P 500 UCITS (Dist)",t:"VUSA",x:"ETF · S&P 500 (UE)",c:"EUR",y:"VUSA.AS",i:"IE00B3XXRP09"},
+  {n:"Vanguard FTSE All-World UCITS (Acc)",t:"VWCE",x:"ETF · Global (UE)",c:"EUR",y:"VWCE.DE",i:"IE00BK5BQT80"},
+  {n:"iShares Core MSCI World UCITS",t:"IWDA",x:"ETF · Global (UE)",c:"EUR",y:"IWDA.AS",i:"IE00B4L5Y983"},
+  {n:"iShares Core MSCI World UCITS (Xetra)",t:"EUNL",x:"ETF · Global (UE)",c:"EUR",y:"EUNL.DE",i:"IE00B4L5Y983"},
+  {n:"iShares Core MSCI EM IMI UCITS",t:"IS3N",x:"ETF · Emergentes (UE)",c:"EUR",y:"IS3N.DE",i:"IE00BKM4GZ66"},
+  {n:"Invesco QQQ Trust",t:"QQQ",x:"ETF · Nasdaq-100 (EUA)",c:"USD",y:"QQQ",i:"US46090E1038"},
+  {n:"SPDR S&P 500 ETF",t:"SPY",x:"ETF · S&P 500 (EUA)",c:"USD",y:"SPY",i:"US78462F1030"},
+  {n:"Vanguard S&P 500 ETF",t:"VOO",x:"ETF · S&P 500 (EUA)",c:"USD",y:"VOO",i:"US9229083632"},
+  {n:"Vanguard S&P 500 UCITS (Acc)",t:"VUAA",x:"ETF · S&P 500 (UE)",c:"EUR",y:"VUAA.DE",i:"IE00BFMXXD54"},
+  {n:"SPDR S&P 500 UCITS (SPYL)",t:"SPYL",x:"ETF · S&P 500 (UE)",c:"EUR",y:"SPYL.DE",i:"IE000XZSV718"},
+  {n:"iShares Core S&P 500 UCITS",t:"CSPX",x:"ETF · S&P 500 (Londres)",c:"USD",y:"CSPX.L",i:"IE00B5BMR087"},
   // S&P 500 (todas as empresas do índice)
   {n:"3M",t:"MMM",x:"Industrial",c:"USD",y:"MMM"},
   {n:"A. O. Smith",t:"AOS",x:"Industrial",c:"USD",y:"AOS"},

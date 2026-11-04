@@ -116,4 +116,16 @@ test('pesquisa global no Yahoo filtra tipos e normaliza', async () => {
   const r = await searchYahoo('vwce');
   assert.deepEqual(r.map(x => x.y), ['VWCE.DE']);
   assert.equal(r[0].x, 'XETRA · ETF');
+  assert.equal(r[0].c, 'EUR', 'mostra a moeda em que cota');
+});
+
+test('pesquisa global: moeda de cada bolsa (Londres tem linhas em £ e em $: fica em branco)', async () => {
+  reset();
+  mockFetch([['allorigins', { quotes: [
+    { symbol: 'ZZW.L', longname: 'Fundo Mundial Inventado USD (Acc)', quoteType: 'ETF', exchDisp: 'London' },
+    { symbol: 'ZZW.AS', longname: 'Fundo Mundial Inventado USD (Acc)', quoteType: 'ETF', exchDisp: 'Amsterdam' },
+    { symbol: 'ZZA', longname: 'Empresa Inventada', quoteType: 'EQUITY', exchDisp: 'NASDAQ' },
+    { symbol: '0P0000ZZZ', longname: 'Fundo Inventado', quoteType: 'MUTUALFUND' },
+  ] }]]);
+  assert.deepEqual((await searchYahoo('mundial')).map(x => x.c), [null, 'EUR', 'USD', null]);
 });

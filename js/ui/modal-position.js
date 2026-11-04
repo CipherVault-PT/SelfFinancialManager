@@ -83,6 +83,15 @@ export function modalAdd(preset = null) {
     segmented($('#curSel'), 'c', c => { draft.currency = c; pick?.render(); form.render(); updatePreview(); });
   }
 
+  /** Cotação no formulário; a Trade Republic só negoceia em euros, por isso avisa se a escolhida cota noutra moeda. */
+  function showQuote(stock, q) {
+    const h = $('#quoteHint');
+    if (!h || !q) return;
+    const tr = $('#dPlat')?.value === 'Trade Republic' && q.cur !== 'EUR';
+    h.innerHTML = `Cotação atual: <b>${price(q.price, q.cur)}</b>${q.dayPct != null ? ` · ${dayWord(dayMoveAt(stock.y, { ...q, ts: Date.now() }))} ${pct(q.dayPct)}` : ''}${tr
+      ? '<br><span class="qwarn">A Trade Republic mostra o preço em €. Para bater certo, escolhe a versão em € (ex.: Xetra, símbolo .DE) — o "USD" no nome de um ETF é só a moeda do fundo.</span>' : ''}`;
+  }
+
   async function loadQuote(stock) {
     const token = ++draft.quoteToken;
     const hint = $('#quoteHint');
@@ -93,7 +102,7 @@ export function modalAdd(preset = null) {
     const h = $('#quoteHint');
     if (q) {
       stock.c = q.cur;
-      if (h) h.innerHTML = `Cotação atual: <b>${price(q.price, q.cur)}</b>${q.dayPct != null ? ` · ${dayWord(dayMoveAt(stock.y, { ...q, ts: Date.now() }))} ${pct(q.dayPct)}` : ''}`;
+      showQuote(stock, q);
       form.render();
       form.prefillPrice(q.price, q.cur);
     } else if (h) {
@@ -167,7 +176,7 @@ export function modalAdd(preset = null) {
     draft.kind = k; draft.coin = null; draft.stock = null; draft.manual = false; draft.quote = null; draft.quoteToken++;
     renderAsset(); renderCur(); form.render(); updatePreview();
   });
-  $('#dPlat').onchange = () => { pick.render(); form.renderAdj(); updatePreview(); };
+  $('#dPlat').onchange = () => { pick.render(); form.renderAdj(); updatePreview(); if (draft.stock) showQuote(draft.stock, draft.quote); };
   $('#dSave').onclick = save;
 
   renderAsset();
