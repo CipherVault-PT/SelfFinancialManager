@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state } from '../js/store.js';
-import { MARKETS, easter, marketOf, marketStatus, sessionOn, isTradingDay, noteSession, extFromChart, extQuote, marketsHeld, zoned, extRows, trackedIndex, futuresWanted, futuresTime, futureQuote, lastClose } from '../js/markets.js';
+import { MARKETS, easter, marketOf, marketStatus, sessionOn, isTradingDay, noteSession, extFromChart, extQuote, marketsHeld, zoned, extRows, trackedIndex, futuresWanted, futuresTime, futureQuote, lastClose, overnightNow } from '../js/markets.js';
 import { fetchFutures, withLastPost, yahooChartUrl } from '../js/quotes/stocks.js';
 import { parseYahooChart } from '../js/quotes/stocks.js';
 import { reset, stockPos, lot, mockFetch } from './helpers.js';
@@ -230,3 +230,14 @@ test('pré/pós-mercado: só negócios depois do último fecho, com a variação
   assert.equal(+extQuote('ZZA', at('2026-10-16T21:30:00Z')).pct.toFixed(6), -1);
   assert.equal(extQuote('ZZA', at('2026-10-17T03:00:00Z')).phase, 'post', 'de madrugada continua o pós de ontem');
 });
+
+test('sessão noturna dos EUA (Blue Ocean): das 20:00 às 4:00 de Nova Iorque, de domingo a quinta', () => {
+  reset();
+  assert.deepEqual(overnightNow(at('2026-11-04T01:47:00Z')), { from: at('2026-11-04T01:00:00Z'), to: at('2026-11-04T09:00:00Z') }, 'terça às 20:47 em NY');
+  assert.ok(overnightNow(at('2026-11-04T08:30:00Z')), 'quarta às 3:30 em NY');
+  assert.equal(overnightNow(at('2026-11-04T12:00:00Z')), null, 'pré-mercado');
+  assert.equal(overnightNow(at('2026-11-04T22:00:00Z')), null, 'pós-mercado');
+  assert.equal(overnightNow(at('2026-11-07T02:00:00Z')), null, 'sexta à noite não há');
+  assert.ok(overnightNow(at('2026-11-09T01:30:00Z')), 'domingo à noite já há');
+});
+
