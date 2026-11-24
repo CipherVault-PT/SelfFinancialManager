@@ -25,7 +25,10 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Relatório para o IRS**, por ano — mais-valias: uma linha por cada compra vendida (FIFO), valores em € (câmbio do BCE da data para contas noutra moeda), dias detido, totais de ações/ETFs e cripto (< 365 dias tributada; ≥ 365 dias excluída), imposto estimado à taxa de 28%; dividendos em € com o imposto retido no estrangeiro e o imposto adicional estimado; exportação CSV para Excel. É uma ajuda — não substitui o guia da corretora nem um contabilista.
 - **Distribuição por setor, país e moeda** no Painel, com aviso de concentração (≥ 40% num setor, país ou fora do euro). As ~1800 ações da base já vêm classificadas; as restantes ganham o país pela bolsa e podes completar ou corrigir o setor e o país à mão.
 - **Rentabilidade real** no Painel: ganho total (inclui vendas e dividendos), rentabilidade **por ano (TIR)** que conta com o dia de cada compra e venda, e comparação com o **S&P 500** — o mesmo dinheiro, nas mesmas datas, num ETF em euros (SXR8.DE). Antes de 1 ano mostra a rentabilidade do período (anualizar poucos meses engana).
-- **Importar o extrato da XTB** (Excel exportado da xStation): cria as posições abertas e as vendas com a data e o custo de cada compra (prontas para o relatório do IRS) e os dividendos com o imposto retido. Pré-visualização antes de aplicar, não duplica ao importar de novo, pode substituir o que registaste à mão e dá para desfazer. CFDs ficam de fora. O ficheiro é lido só no dispositivo (leitor de .xlsx próprio, sem bibliotecas externas).
+- **Importar extratos** — o ficheiro é lido só no dispositivo (leitores de .xlsx e .csv próprios, sem bibliotecas externas):
+  - **XTB** (Excel exportado da xStation, formato antigo e o de 2026): posições abertas, vendas com a data e o custo de cada compra (prontas para o relatório do IRS) e dividendos com o imposto retido. A conta em euros e a conta em dólares ficam separadas. CFDs ficam de fora.
+  - **Trade Republic** (transações em CSV): reconstrói as posições pelo FIFO, com planos de poupança, comissões e impostos de cada operação, dividendos e juros. O símbolo de cada ação vem do ISIN (base local para os ETFs principais, senão pesquisa do Yahoo). Nomes e IBAN das transferências não são lidos. Se o ficheiro começar depois das primeiras compras, avisa e usa o preço médio da corretora para essas unidades.
+  - Pré-visualização antes de aplicar, não duplica ao importar de novo, pode substituir o que registaste à mão (as outras corretoras e as cripto não mudam; o mesmo ETF noutra bolsa é reconhecido pelo ISIN, sem perder o plano) e dá para desfazer.
 - **Bloqueio com PIN** (4 a 8 algarismos, guardado só como hash PBKDF2) e, onde o dispositivo o permite, **impressão digital / Face ID** (WebAuthn). Bloqueia ao abrir e ao voltar à app (logo, 1, 5 ou 15 min), espera progressiva depois de 5 erros e "Esqueci-me do PIN" (apaga os dados do dispositivo; depois repões um backup). É uma proteção contra quem pegue no telemóvel — não cifra os dados.
 - **Planos de poupança**: compra mensal de valor fixo numa posição (ex: 100 € de VWCE no dia 2). No dia, o Painel avisa para registar a compra — valor e preço pré-preenchidos, unidades estimadas e editáveis, pagamento com um saldo — ou saltar o mês. A app não compra nada sozinha.
 - **Meta**: objetivo de património, valor por mês e rentabilidade estimada (ou a tua TIR); progresso, data estimada para lá chegares, cenários a ±2% e a regra dos 4%.
@@ -91,7 +94,7 @@ js/
   plans.js              planos de poupança mensais
   goals.js              metas: projeção com juros compostos, regra dos 4%
   rebalance.js          alocação alvo e sugestão de onde investir
-  import/               extratos: xlsx.js (leitor de Excel), xtb.js (formato XTB), apply.js (pré-visualizar e aplicar)
+  import/               extratos: xlsx.js e csv.js (leitores), xtb.js (XTB), tr.js (Trade Republic), apply.js (pré-visualizar e aplicar)
   tax.js                relatório IRS: mais-valias FIFO e dividendos (câmbio histórico, resumo anual, CSV)
   alerts.js             alertas de preço
   net.js                pedidos com timeout e concorrência limitada

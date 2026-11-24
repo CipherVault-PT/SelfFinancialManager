@@ -240,3 +240,66 @@ test('importar: substitui ou junta o que foi registado à mão na mesma corretor
 });
 
 const near = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} ≉ ${b}`);
+
+/* ---------- formato de 2026 da XTB (dados inventados) ---------- */
+
+const NEW_HEAD = (title, from = '2026-01-01', to = '2026-06-30') => [['Account number', '000'], [title], ['Date from (UTC)', serial(from)], ['Date to (UTC)', at(to, 23)]];
+function xtbNewSheets({ cur = 'EUR', open = [], closed = [], cash = [] } = {}) {
+  return {
+    'Closed Positions': [...NEW_HEAD('Closed Positions'),
+      ['Instrument', 'Ticker', 'Category', 'Type', 'Volume', 'Open Price', 'Open Time (UTC)', 'Close Price', 'Close Time (UTC)', 'Product', 'Profit/Loss', 'Gross Profit', 'Purchase Value', 'Sale Value', 'Stop Loss', 'Take Profit', 'Commission', 'Margin', 'Swap', 'Rollover', 'Open Conversion Rate', 'Close Conversion Rate', 'Close Origin', 'Position ID', 'Comment'],
+      ...closed, ['Profit/loss', null, null, null, null, null, null, null, null, null, 1, 1]],
+    'Cash Operations': [...NEW_HEAD('Cash Operations'), ['Type', 'Instrument', 'Ticker', 'Category', 'Time', 'Amount', 'ID', 'Comment', 'Product', 'Position ID'], ...cash, ['Total', null, null, null, null, 1]],
+    'Open Positions': [['Account number', '000'], ['Open Positions'], ['Data as of report generated', at('2026-06-30', 23)],
+      ['Product', 'Metric', 'Amount', 'Currency'], ['My Trades', 'Open position value', 1, cur], ['My Trades', 'Open position profit', 0, cur], [],
+      ['Note', 'Summary values and open positions are shown as of the report generation time'],
+      ['Product', 'Instrument/Position', 'Ticker', 'Category', 'Type', 'Volume', 'Value', 'Current price', 'Open price', 'Open time (UTC)', 'Stop Loss', 'Take Profit', 'Net Profit %', 'Net Profit', 'Gross Profit'],
+      ...open],
+  };
+}
+// resumo de cada ação e, por baixo, cada posição (valor atual e lucro → custo = valor − lucro)
+const NS = (name, ticker, cat) => ['My Trades', name, ticker, cat, null, 0, 0];
+const NO = (id, ticker, units, price, date, value, mkt, gross) => ['My Trades', id, ticker, null, 'BUY', units, value, mkt, price, at(date), null, null, 0, gross, gross];
+const NC = (id, ticker, units, price, date, cost, closeDate, cp, sale, cat = 'STOCK') =>
+  ['Empresa', ticker, cat, 'BUY', units, price, at(date), cp, at(closeDate, 15), 'My Trades', sale - cost, sale - cost, cost, sale, null, null, 0, null, null, null, null, null, 'Android', id];
+const newSample = async (data, rates = RATES) => parseXtb(await readXlsx(makeXlsx(xtbNewSheets(data))), { rates });
+
+test('XTB (formato de 2026): posições abertas pelo valor menos o lucro, vendas, juros; CFDs e totais de fora', async () => {
+  const s = await newSample({
+    open: [NS('Empresa A', 'ZZA.US', 'STOCK'), NO('701', 'ZZA.US', 10, 20, '2026-02-02', 150, 17.5, -21),
+      NS('Fundo B', 'ZZB.DE', 'ETF'), NO('702', 'ZZB.DE', 4, 50, '2026-03-03', 220, 55, 20),
+      NS('Ouro', 'GOLD', 'CMD'), NO('703', 'GOLD', 1, 2000, '2026-03-03', 2100, 2100, 100)],
+    closed: [NC(801, 'ZZA.US', 5, 18, '2025-11-03', 77.4, '2026-04-01', 21, 90.3), NC(802, 'ZZC.PT', 100, 2, '2026-01-05', 200, '2026-02-02', 2.5, 250),
+      NC(803, 'OIL', 1, 70, '2026-01-05', 70, '2026-02-02', 75, 75, 'CFD')],
+    cash: [['Free funds interest', null, null, null, at('2026-05-01'), 2, '9001', 'Free-funds Interest 2026-04', 'My Trades'],
+      ['Free funds interest tax', null, null, null, at('2026-05-01'), -0.5, '9002', 'Free-funds Interest Tax 2026-04', 'My Trades'],
+      ['Deposit', null, null, null, at('2026-01-02'), 1000, '9003', 'Deposit', 'My Trades']],
+  });
+  assert.equal(s.currency, 'EUR');
+  assert.deepEqual(s.period, { from: '2026-01-01', to: '2026-06-30' });
+  assert.equal(s.snapshot, '2026-06-30');
+  assert.deepEqual(s.open.map(r => [r.id, r.y, r.units, r.cost, r.date, r.quoteCur, r.lastPrice]), [
+    ['701', 'ZZA', 10, 171, '2026-02-02', 'USD', 17.5], ['702', 'ZZB.DE', 4, 200, '2026-03-03', 'EUR', 55],
+  ]);
+  assert.deepEqual(s.closed.map(r => [r.id, r.y, r.units, r.cost, r.proceeds, r.date, r.closeDate]), [
+    ['801', 'ZZA', 5, 77.4, 90.3, '2025-11-03', '2026-04-01'], ['802', 'ZZC.LS', 100, 200, 250, '2026-01-05', '2026-02-02'],
+  ]);
+  assert.equal(s.cfd.count, 2, 'ouro (CFD) aberto e petróleo (CFD) fechado');
+  assert.deepEqual(s.interest, { gross: 2, tax: 0.5 });
+  assert.equal(s.deposits, 1000);
+  assert.ok(isXtb(await readXlsx(makeXlsx(xtbNewSheets()))));
+});
+
+test('XTB: a conta em dólares fica separada da conta em euros (mesma ação nas duas)', async () => {
+  reset();
+  const eur = await newSample({ open: [NS('A', 'ZZA.US', 'STOCK'), NO('711', 'ZZA.US', 10, 20, '2026-02-02', 150, 17.5, -21)] });
+  const usd = await newSample({ cur: 'USD', open: [NS('A', 'ZZA.US', 'STOCK'), NO('712', 'ZZA.US', 3, 21, '2026-02-09', 60, 20, -3)],
+    closed: [NC(811, 'ZZA.US', 2, 30, '2025-10-01', 60, '2026-03-01', 25, 50)] });
+  assert.equal(usd.currency, 'USD');
+  applyImport(planImport(eur));
+  applyImport(planImport(usd));
+  const zza = state.positions.filter(p => p.quoteSymbol === 'ZZA');
+  assert.deepEqual(zza.map(p => [p.currency, p.lots.length, p.lots[0].cost]).sort(), [['EUR', 1, 171], ['USD', 1, 63]]);
+  assert.deepEqual(state.closed.map(c => [c.currency, c.proceeds]), [['USD', 50]]);
+  assert.equal(planImport(usd).summary.changes, 0, 'reimportar não duplica');
+});

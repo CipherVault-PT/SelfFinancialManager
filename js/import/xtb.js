@@ -79,20 +79,10 @@ const num = v => (typeof v === 'number' ? v : Number.parseFloat(String(v ?? '').
 /** Reconhece um extrato da XTB (xStation → Histórico → Exportar para Excel). */
 export const isXtb = wb => !!(findSheet(wb, 'cash operation history') || findSheet(wb, 'closed position history') || findSheet(wb, 'open position'));
 
-/**
- * Lê o extrato da XTB: posições abertas, posições fechadas (cada compra com a sua data, custo
- * e valor de venda na moeda da conta) e dividendos. CFDs ficam de fora (só ações e ETFs reais).
- */
-export function parseXtb(wb, { rates = { EUR: 1, USD: 1.17, GBP: 0.86 } } = {}) {
-  const openRows = findSheet(wb, 'open position'), closedRows = findSheet(wb, 'closed position history');
-  const cashRows = findSheet(wb, 'cash operation history');
-  const currency = accountCurrency(cashRows ?? closedRows ?? openRows ?? []) ?? 'EUR';
-  const period = periodOf(cashRows) ?? periodOf(closedRows);
-  const cfd = { count: 0, pl: 0 };
+/** Ação/ETF da XTB → símbolo do Yahoo, nome e moeda de cotação (a mesma em todo o extrato). */
+function assets(rates, currency) {
   const curBySym = {};
-  const out = { broker: 'XTB', currency, period, snapshot: null, open: [], closed: [], dividends: [], cfd, interest: { gross: 0, tax: 0 } };
-
-  const assetOf = (sym, units, price, value) => {
+  return (sym, units, price, value) => {
     const a = xtbToYahoo(sym);
     if (!a) return null;
     const db = byQuote(a.y);
@@ -101,6 +91,52 @@ export function parseXtb(wb, { rates = { EUR: 1, USD: 1.17, GBP: 0.86 } } = {}) 
     if (cur === 'GBp') { cur = 'GBP'; px = price / 100; }
     return { ...a, name: db?.n ?? a.ticker, exchange: db?.x ?? null, quoteCur: cur, price: px, gbp: curBySym[a.y] === 'GBp' };
   };
+}
+
+/** Juros, dividendos e impostos retidos das operações de caixa (os dois formatos). */
+function cashOps(rows, out, { type, time, sym, id }) {
+  const divs = [], taxes = [];
+  for (const r of rows) {
+    const t = norm(type(r)), amount = num(r.amount), s = sym(r), date = excelDate(num(time(r)));
+    if (!Number.isFinite(amount) || !date) continue;
+    if (t.startsWith('free-funds interest') || t.startsWith('free funds interest')) {
+      if (t.includes('tax')) out.interest.tax -= amount; else out.interest.gross += amount;
+    } else if (t.startsWith('divid')) {
+      if (s && amount > 0) divs.push({ id: String(id(r)), sym: s, date, gross: amount, withheld: 0 });
+    } else if (s && (t.includes('withholding') || t === 'tax' || t.includes('wht'))) {
+      taxes.push({ sym: s, date, amount: -amount });
+    } else if (t === 'deposit') out.deposits = (out.deposits || 0) + amount;
+  }
+  for (const t of taxes) {
+    const day = Date.parse(t.date);
+    const d = divs
+      .filter(x => x.sym === t.sym && Math.abs(Date.parse(x.date) - day) <= 3 * 86_400_000)
+      .sort((x, y) => Math.abs(Date.parse(x.date) - day) - Math.abs(Date.parse(y.date) - day))[0];
+    if (d) d.withheld = Math.max(0, d.withheld + t.amount);
+  }
+  for (const d of divs) {
+    const a = xtbToYahoo(d.sym);
+    if (!a) continue;
+    const db = byQuote(a.y);
+    out.dividends.push({ ...d, xtb: d.sym, y: a.y, ticker: a.ticker, name: db?.n ?? a.ticker, withheld: Math.min(d.withheld, d.gross) });
+  }
+}
+
+/**
+ * Lê o extrato da XTB: posições abertas, posições fechadas (cada compra com a sua data, custo
+ * e valor de venda na moeda da conta) e dividendos. CFDs ficam de fora (só ações e ETFs reais).
+ * Aceita o formato antigo ("Closed Position History"…) e o de 2026 ("Closed Positions", com "Ticker").
+ */
+export function parseXtb(wb, { rates = { EUR: 1, USD: 1.17, GBP: 0.86 } } = {}) {
+  if (isNewXtb(wb)) return parseXtbNew(wb, rates);
+  const openRows = findSheet(wb, 'open position'), closedRows = findSheet(wb, 'closed position history');
+  const cashRows = findSheet(wb, 'cash operation history');
+  const currency = accountCurrency(cashRows ?? closedRows ?? openRows ?? []) ?? 'EUR';
+  const period = periodOf(cashRows) ?? periodOf(closedRows);
+  const cfd = { count: 0, pl: 0 };
+  const out = { broker: 'XTB', currency, period, snapshot: null, open: [], closed: [], dividends: [], cfd, interest: { gross: 0, tax: 0 } };
+
+  const assetOf = assets(rates, currency);
 
   const op = table(openRows, ['position', 'symbol', 'volume', 'open time', 'open price', 'purchase value']);
   if (op) {
@@ -146,34 +182,85 @@ export function parseXtb(wb, { rates = { EUR: 1, USD: 1.17, GBP: 0.86 } } = {}) 
 
   const ca = table(cashRows, ['id', 'type', 'time', 'amount']);
   if (ca) {
-    const divs = [], taxes = [];
-    for (const r of ca.data) {
-      const type = norm(ca.get(r, 'type')), amount = num(ca.get(r, 'amount')), sym = ca.get(r, 'symbol');
-      const date = excelDate(num(ca.get(r, 'time')));
-      if (!Number.isFinite(amount) || !date) continue;
-      if (type.startsWith('free-funds interest')) {
-        if (type.includes('tax')) out.interest.tax -= amount; else out.interest.gross += amount;
-      } else if (type.startsWith('divid')) {
-        if (sym && amount > 0) divs.push({ id: String(ca.get(r, 'id')), sym, date, gross: amount, withheld: 0 });
-      } else if (sym && (type.includes('withholding') || type === 'tax' || type.includes('wht'))) {
-        taxes.push({ sym, date, amount: -amount });
-      }
-    }
-    for (const t of taxes) {
-      const day = Date.parse(t.date);
-      const d = divs
-        .filter(x => x.sym === t.sym && Math.abs(Date.parse(x.date) - day) <= 3 * 86_400_000)
-        .sort((x, y) => Math.abs(Date.parse(x.date) - day) - Math.abs(Date.parse(y.date) - day))[0];
-      if (d) d.withheld = Math.max(0, d.withheld + t.amount);
-    }
-    for (const d of divs) {
-      const a = xtbToYahoo(d.sym);
-      if (!a) continue;
-      const db = byQuote(a.y);
-      out.dividends.push({ ...d, xtb: d.sym, y: a.y, ticker: a.ticker, name: db?.n ?? a.ticker, withheld: Math.min(d.withheld, d.gross) });
-    }
+    cashOps(ca.data.map(r => ({ r, amount: ca.get(r, 'amount') })), out, {
+      type: x => ca.get(x.r, 'type'), time: x => ca.get(x.r, 'time'), sym: x => ca.get(x.r, 'symbol'), id: x => ca.get(x.r, 'id'),
+    });
   }
 
   if (!op && !cl && !ca) throw new Error('Não encontrei as folhas do extrato da XTB');
   return out;
 }
+
+/* ---------- formato de 2026 ---------- */
+
+const isNewXtb = wb => [findSheet(wb, 'closed position'), findSheet(wb, 'open position')]
+  .some(rows => rows?.slice(0, 15).some(r => r.some(x => norm(x) === 'ticker')));
+
+/** Valor numa linha de cabeçalho do tipo ["Date from (UTC)", 46023]. */
+const metaOf = (rows, label) => rows?.slice(0, 12).find(r => norm(r[0]) === label)?.[1];
+
+function parseXtbNew(wb, rates) {
+  const openRows = findSheet(wb, 'open position'), closedRows = findSheet(wb, 'closed position');
+  const cashRows = findSheet(wb, 'cash operation');
+  const currency = openRows?.slice(0, 12).find(r => norm(r[1]) === 'open position value')?.[3] ?? 'EUR';
+  const from = excelDate(num(metaOf(closedRows ?? cashRows, 'date from (utc)')));
+  const to = excelDate(num(metaOf(closedRows ?? cashRows, 'date to (utc)')));
+  const cfd = { count: 0, pl: 0 };
+  const out = {
+    broker: 'XTB', currency: /^[A-Z]{3}$/.test(currency) ? currency : 'EUR', period: from && to ? { from, to } : null,
+    snapshot: excelDate(num(metaOf(openRows, 'data as of report generated'))) || to || null,
+    open: [], closed: [], dividends: [], cfd, interest: { gross: 0, tax: 0 },
+  };
+  const assetOf = assets(rates, out.currency);
+  const real = c => c === 'stock' || c === 'etf';
+
+  const op = table(openRows, ['instrument/position', 'ticker', 'type', 'volume', 'open price', 'open time (utc)']);
+  if (op) {
+    let category = '';
+    for (const r of op.data) {
+      const type = norm(op.get(r, 'type'));
+      if (!type) { category = norm(op.get(r, 'category')); continue; } // linha de resumo de cada ação
+      const units = num(op.get(r, 'volume')), price = num(op.get(r, 'open price')), value = num(op.get(r, 'value'));
+      const gross = num(op.get(r, 'gross profit')), cost = value - (Number.isFinite(gross) ? gross : num(op.get(r, 'net profit')));
+      if (type !== 'buy' || !real(category) || !(cost > 0)) { if (units > 0) cfd.count++; continue; }
+      const a = assetOf(op.get(r, 'ticker'), units, price, cost);
+      if (!a || !(units > 0)) continue;
+      const mkt = num(op.get(r, 'current price'));
+      out.open.push({
+        id: String(op.get(r, 'instrument/position')), xtb: op.get(r, 'ticker'), ...a, units, cost,
+        date: excelDate(num(op.get(r, 'open time (utc)'))), lastPrice: mkt > 0 ? (a.gbp ? mkt / 100 : mkt) : null,
+      });
+    }
+  }
+
+  const cl = table(closedRows, ['ticker', 'type', 'volume', 'open time (utc)', 'close time (utc)', 'purchase value', 'sale value', 'position id']);
+  if (cl) {
+    for (const r of cl.data) {
+      const units = num(cl.get(r, 'volume')), price = num(cl.get(r, 'open price')), cost = num(cl.get(r, 'purchase value'));
+      const proceeds = num(cl.get(r, 'sale value'));
+      if (!cl.get(r, 'ticker')) continue; // total
+      if (!real(norm(cl.get(r, 'category'))) || norm(cl.get(r, 'type')) !== 'buy' || !(cost > 0) || !(proceeds >= 0)) {
+        if (units > 0) { cfd.count++; cfd.pl += num(cl.get(r, 'gross profit')) || 0; }
+        continue;
+      }
+      const a = assetOf(cl.get(r, 'ticker'), units, price, cost);
+      if (!a || !(units > 0)) continue;
+      const closeTs = num(cl.get(r, 'close time (utc)')), cp = num(cl.get(r, 'close price'));
+      out.closed.push({
+        id: String(cl.get(r, 'position id')), xtb: cl.get(r, 'ticker'), ...a, units, cost, proceeds,
+        date: excelDate(num(cl.get(r, 'open time (utc)'))), closeTs: String(closeTs), closeDate: excelDate(closeTs),
+        closePrice: cp > 0 ? (a.gbp ? cp / 100 : cp) : null,
+      });
+    }
+  }
+
+  const ca = table(cashRows, ['type', 'ticker', 'time', 'amount', 'id']);
+  if (ca) {
+    cashOps(ca.data.map(r => ({ r, amount: ca.get(r, 'amount') })), out, {
+      type: x => ca.get(x.r, 'type'), time: x => ca.get(x.r, 'time'), sym: x => ca.get(x.r, 'ticker'), id: x => ca.get(x.r, 'id'),
+    });
+  }
+  if (!op && !cl && !ca) throw new Error('Não encontrei as folhas do extrato da XTB');
+  return out;
+}
+

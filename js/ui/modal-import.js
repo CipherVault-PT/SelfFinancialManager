@@ -1,39 +1,59 @@
 import { state, commit } from '../store.js';
 import { readXlsx } from '../import/xlsx.js';
 import { isXtb, parseXtb } from '../import/xtb.js';
+import { parseCsv } from '../import/csv.js';
+import { isTr, parseTr, resolveIsins } from '../import/tr.js';
+import { searchYahoo } from '../quotes/stocks.js';
 import { planImport, applyImport, manualCount } from '../import/apply.js';
 import { refresh } from '../quotes/index.js';
 import { daysBetween } from '../performance.js';
 import { esc, money, plural, todayISO } from '../format.js';
+
+const num = v => v.toLocaleString('pt-PT', { maximumFractionDigits: 4 });
 import { $, toast, openModal, closeModal } from './dom.js';
 
 const header = `<div class="mh"><h3>Importar extrato</h3><button type="button" class="x" data-action="modal-close" aria-label="Fechar">✕</button></div>`;
 
 const BROKERS = [
   ['XTB', 'Excel (.xlsx)', true],
+  ['Trade Republic', 'CSV', true],
   ['Revolut', 'em breve', false],
-  ['Trade Republic', 'em breve', false],
 ];
 
 export function modalImport(error = '') {
   openModal(`${header}
     <p class="mlead">Cria as posições, as <b>vendas com a data de cada compra</b> (para o IRS) e os dividendos a partir do extrato da corretora. O ficheiro é lido <b>só neste dispositivo</b>.</p>
     <div class="imp-brokers">${BROKERS.map(([n, s, on]) => `<div class="imp-b${on ? '' : ' off'}"><b>${n}</b><span>${s}</span></div>`).join('')}</div>
-    <div class="imp-how"><b>XTB:</b> na xStation, abre o <i>Histórico</i> da conta, escolhe o período <b>desde que abriste a conta até hoje</b> e exporta para <i>Excel</i>. Não precisas de mexer no ficheiro.</div>
+    <div class="imp-how"><b>XTB:</b> na xStation, abre o <i>Histórico</i> da conta, escolhe o período <b>desde que abriste a conta até hoje</b> e exporta para <i>Excel</i>. Se tens conta em euros e em dólares, importa um ficheiro de cada.</div>
+    <div class="imp-how"><b>Trade Republic:</b> exporta as <i>transações</i> em CSV, <b>desde que abriste a conta</b>. Não precisas de mexer no ficheiro.</div>
     ${error ? `<div class="imp-err" role="alert">${esc(error)}</div>` : ''}
-    <label class="btn pri wide imp-pick">Escolher ficheiro…<input type="file" id="iFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hide"></label>`);
+    <label class="btn pri wide imp-pick">Escolher ficheiro…<input type="file" id="iFile" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hide"></label>`);
   $('#iFile').onchange = async e => {
     const f = e.target.files?.[0];
     if (!f) return;
     $('.imp-pick').classList.add('busy');
     try {
-      const wb = await readXlsx(await f.arrayBuffer());
-      if (!isXtb(wb)) throw new Error('Não reconheci este ficheiro. Por agora a app lê o extrato da XTB em Excel.');
-      preview(parseXtb(wb, { rates: state.cache.rates }));
+      preview(await readStatement(f));
     } catch (err) {
       modalImport(err?.message || 'Não consegui ler o ficheiro.');
     }
   };
+}
+
+/** Lê o ficheiro escolhido: Excel da XTB ou CSV da Trade Republic (este com os símbolos encontrados pelo ISIN). */
+async function readStatement(f) {
+  const head = new Uint8Array(await f.slice(0, 2).arrayBuffer());
+  if (head[0] === 0x50 && head[1] === 0x4b) {
+    const wb = await readXlsx(await f.arrayBuffer());
+    if (!isXtb(wb)) throw new Error('Não reconheci este ficheiro. A app lê o extrato da XTB (Excel) e as transações da Trade Republic (CSV).');
+    return parseXtb(wb, { rates: state.cache.rates });
+  }
+  const text = await f.text();
+  if (!isTr(parseCsv(text.slice(0, 4000)))) throw new Error('Não reconheci este ficheiro. A app lê o extrato da XTB (Excel) e as transações da Trade Republic (CSV).');
+  const stmt = parseTr(text, { name: f.name });
+  const pick = $('.imp-pick');
+  if (pick) pick.firstChild.textContent = 'A identificar as ações…';
+  return resolveIsins(stmt, isin => searchYahoo(isin));
 }
 
 function preview(stmt, replace = true) {
@@ -52,7 +72,11 @@ function preview(stmt, replace = true) {
     s.removedLots + s.removedSales > 0 && row('🔁', `${s.removedLots + s.removedSales === 1 ? 'Sai' : 'Saem'} ${[s.removedLots && plural(s.removedLots, 'entrada', 'entradas'), s.removedSales && plural(s.removedSales, 'venda', 'vendas')].filter(Boolean).join(' e ')} que registaste à mão${s.removedPositions.length ? ` <small>sai: ${esc(s.removedPositions.join(', '))}</small>` : ''}`),
     s.skipped && row('↷', `${plural(s.skipped, 'movimento já importado', 'movimentos já importados')} — ignorado${s.skipped === 1 ? '' : 's'}`, 'muted'),
     stmt.cfd.count && row('⚠', `${plural(stmt.cfd.count, 'operação CFD ignorada', 'operações CFD ignoradas')} (resultado ${money(stmt.cfd.pl, cur)}). A app só acompanha ações e ETFs; para o IRS dos CFDs usa o relatório fiscal da XTB.`, 'warn'),
+    stmt.approx?.length && row('ℹ', `${stmt.approx.map(a => `${esc(a.name)}: ${num(a.units)} un. compradas antes de ${esc(stmt.period?.from ?? '')}`).join('; ')} — custo pelo preço médio da corretora e data aproximada. Para valores exatos, exporta desde a abertura da conta.`, 'warn'),
+    stmt.missing?.length && row('⚠', `Vendas sem as compras no ficheiro (${esc(stmt.missing.map(m => m.name).join(', '))}) — ficam de fora. Exporta desde a abertura da conta.`, 'warn'),
+    stmt.unresolved?.length && row('⚠', `Sem cotação ao vivo (não encontrei o símbolo): ${esc(stmt.unresolved.join(', '))} — usa "Preço atual" no cartão.`, 'warn'),
     stmt.interest.gross > 0 && row('ℹ', `Juros do saldo não investido: ${money(stmt.interest.gross, cur)} (imposto ${money(stmt.interest.tax, cur)}) — não são importados.`, 'muted'),
+    (stmt.deposits > 0 || stmt.withdrawals > 0) && row('ℹ', `Depósitos ${money(stmt.deposits || 0, cur)} e levantamentos ${money(stmt.withdrawals || 0, cur)} no período — o saldo em dinheiro acertas em Fundo / Cash.`, 'muted'),
   ].filter(Boolean);
   const nothing = !s.changes;
 
