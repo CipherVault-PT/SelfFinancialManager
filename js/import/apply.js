@@ -13,14 +13,30 @@ const keysFor = (P = 'xtb') => ({
 
 const isManual = l => !l.src;
 
-/** A mesma conta: mesma corretora e mesma moeda (a XTB tem uma conta em euros e outra em dólares). */
-const sameAccount = (p, broker, currency) => p.platform === broker && p.kind === 'stock' && (p.currency || 'EUR') === currency;
+/** A mesma conta: mesma corretora, mesma moeda (a XTB tem uma conta em euros e outra em dólares) e mesmo tipo de ativo. */
+const sameAccount = (p, broker, currency, kind = 'stock') => p.platform === broker && p.kind === kind && (p.currency || 'EUR') === currency;
 
 const isinOf = p => p.isin || byQuote(p.quoteSymbol)?.i || null;
 
-/** O mesmo ativo: mesmo símbolo do Yahoo ou, se o extrato tiver o ISIN, o mesmo ISIN (ex.: o ETF noutra bolsa). */
-const sameAsset = (p, r) => (r.y && p.quoteSymbol === r.y) || (!!r.isin && isinOf(p) === r.isin);
-const assetKey = r => r.y || r.isin;
+/**
+ * O mesmo ativo: mesmo símbolo do Yahoo; se o extrato tiver o ISIN, o mesmo ISIN (ex.: o ETF noutra bolsa);
+ * nas cripto, o mesmo id da CoinGecko ou, sem ele, o mesmo símbolo.
+ */
+const sameAsset = (p, r) => (r.y && p.quoteSymbol === r.y) || (!!r.isin && isinOf(p) === r.isin)
+  || (!!r.coin && p.coingeckoId === r.coin)
+  || (!r.coin && !!r.symbol && p.kind === 'crypto' && String(p.symbol || '').toUpperCase() === r.symbol);
+const assetKey = r => r.y || r.isin || r.coin || r.symbol;
+
+/** Campos do ativo para uma posição ou venda nova. */
+function assetFields(r, stmt, broker) {
+  if (stmt.kind === 'crypto') {
+    return { kind: 'crypto', name: r.name, symbol: r.symbol, ...(r.coin ? { coingeckoId: r.coin } : {}), ...(r.thumb ? { thumb: r.thumb } : {}) };
+  }
+  return {
+    kind: 'stock', name: r.name, symbol: r.ticker, exchange: r.exchange ?? broker, quoteSymbol: r.y,
+    quoteCur: r.quoteCur || r.priceCur || stmt.currency, ...(r.isin ? { isin: r.isin } : {}),
+  };
+}
 
 function lotOf(r, src) {
   return { shares: r.units, cost: r.cost, priceQ: r.price > 0 ? r.price : null, priceCur: r.priceCur ?? r.quoteCur, date: r.date, src };
@@ -34,16 +50,16 @@ function reduceLot(lot, units) {
 
 /** Quantas entradas da corretora foram registadas à mão (candidatas a ser substituídas pelo extrato). */
 export function manualCount(broker, stmt) {
-  const T = stmt.snapshot, from = stmt.period?.from, cur = stmt.currency;
+  const T = stmt.snapshot, from = stmt.period?.from, cur = stmt.currency, kind = stmt.kind ?? 'stock';
   const lots = !T ? 0 : state.positions
-    .filter(p => sameAccount(p, broker, cur))
+    .filter(p => sameAccount(p, broker, cur, kind))
     .reduce((s, p) => s + p.lots.filter(l => isManual(l) && (!l.date || l.date <= T)).length, 0);
-  const sales = state.closed.filter(c => manualSale(c, broker, cur, from, T)).length;
+  const sales = state.closed.filter(c => manualSale(c, broker, cur, kind, from, T)).length;
   return { lots, sales };
 }
 
-function manualSale(c, broker, cur, from, to) {
-  return sameAccount(c, broker, cur) && c.lots.every(isManual)
+function manualSale(c, broker, cur, kind, from, to) {
+  return sameAccount(c, broker, cur, kind) && c.lots.every(isManual)
     && !!from && !!to && !!c.closedAt && c.closedAt >= from && c.closedAt <= to;
 }
 
@@ -66,7 +82,8 @@ export function planImport(stmt, { replace = true } = {}) {
   const closedIds = new Set([...keys].filter(k => k.startsWith(K.closedPrefix)).map(k => k.slice(K.closedPrefix.length, k.indexOf('@'))));
 
   const T = stmt.snapshot, from = stmt.period?.from;
-  const mine = p => sameAccount(p, broker, stmt.currency);
+  const kind = stmt.kind ?? 'stock';
+  const mine = p => sameAccount(p, broker, stmt.currency, kind);
 
   if (replace) {
     if (T) {
@@ -76,7 +93,7 @@ export function planImport(stmt, { replace = true } = {}) {
       }
     }
     for (let i = closed.length - 1; i >= 0; i--) {
-      if (manualSale(closed[i], broker, stmt.currency, from, T ?? stmt.period?.to)) { closed.splice(i, 1); sum.removedSales++; }
+      if (manualSale(closed[i], broker, stmt.currency, kind, from, T ?? stmt.period?.to)) { closed.splice(i, 1); sum.removedSales++; }
     }
   }
 
@@ -101,9 +118,8 @@ export function planImport(stmt, { replace = true } = {}) {
     if (!p) {
       const last = r.lastPrice > 0 ? r.lastPrice : !r.y && r.price > 0 ? r.price : 0;
       p = {
-        id: uid(), kind: 'stock', platform: broker, currency: stmt.currency, name: r.name, symbol: r.ticker,
-        exchange: r.exchange ?? broker, quoteSymbol: r.y, quoteCur: r.quoteCur || r.priceCur || stmt.currency, lots: [], openedAt: r.date,
-        ...(r.isin ? { isin: r.isin } : {}), ...(last > 0 ? { manualPrice: last } : {}),
+        id: uid(), platform: broker, currency: stmt.currency, ...assetFields(r, stmt, broker), lots: [], openedAt: r.date,
+        ...(kind === 'stock' && last > 0 ? { manualPrice: last } : {}),
       };
       positions.push(p);
       sum.newPositions.push(p.name);
@@ -136,9 +152,7 @@ export function planImport(stmt, { replace = true } = {}) {
     const exitValue = rows.reduce((s, r) => s + r.units * (r.closePrice || 0), 0);
     const lots = rows.map(r => lotOf(r, closeKey(r))).sort((a, b) => a.date.localeCompare(b.date));
     closed.push({
-      id: uid(), parentId: assetId(r0), kind: 'stock', platform: broker, currency: stmt.currency,
-      name: r0.name, symbol: r0.ticker, exchange: r0.exchange ?? broker, quoteSymbol: r0.y, quoteCur: r0.quoteCur || r0.priceCur || stmt.currency,
-      ...(r0.isin ? { isin: r0.isin } : {}),
+      id: uid(), parentId: assetId(r0), platform: broker, currency: stmt.currency, ...assetFields(r0, stmt, broker),
       lots, openedAt: lots[0].date, exitPrice: units > 0 && exitValue > 0 ? exitValue / units : null, exitCur: r0.priceCur ?? r0.quoteCur,
       proceeds: rows.reduce((s, r) => s + r.proceeds, 0), closedAt: r0.closeDate,
     });

@@ -28,6 +28,7 @@ App web estática (HTML + CSS + JavaScript, sem build) e instalável como app (P
 - **Importar extratos** — o ficheiro é lido só no dispositivo (leitores de .xlsx e .csv próprios, sem bibliotecas externas):
   - **XTB** (Excel exportado da xStation, formato antigo e o de 2026): posições abertas, vendas com a data e o custo de cada compra (prontas para o relatório do IRS) e dividendos com o imposto retido. A conta em euros e a conta em dólares ficam separadas. CFDs ficam de fora.
   - **Trade Republic** (transações em CSV): reconstrói as posições pelo FIFO, com planos de poupança, comissões e impostos de cada operação, dividendos e juros. O símbolo de cada ação vem do ISIN (base local para os ETFs principais, senão pesquisa do Yahoo). Nomes e IBAN das transferências não são lidos. Se o ficheiro começar depois das primeiras compras, avisa e usa o preço médio da corretora para essas unidades.
+  - **Revolut — cripto** (extrato de conta em CSV): compras (incluindo Revolut X), vendas e comissões pelo FIFO; moedas recebidas entram pelo valor no dia em que chegaram (com aviso); envios saem sem contar como venda. Corrige o texto codificado duas vezes e as quantidades que a exportação escreve sem vírgula (usa valor ÷ preço). As moedas ficam ligadas às que já tens na app ou à CoinGecko.
   - Pré-visualização antes de aplicar, não duplica ao importar de novo, pode substituir o que registaste à mão (as outras corretoras e as cripto não mudam; o mesmo ETF noutra bolsa é reconhecido pelo ISIN, sem perder o plano) e dá para desfazer.
 - **Bloqueio com PIN** (4 a 8 algarismos, guardado só como hash PBKDF2) e, onde o dispositivo o permite, **impressão digital / Face ID** (WebAuthn). Bloqueia ao abrir e ao voltar à app (logo, 1, 5 ou 15 min), espera progressiva depois de 5 erros e "Esqueci-me do PIN" (apaga os dados do dispositivo; depois repões um backup). É uma proteção contra quem pegue no telemóvel — não cifra os dados.
 - **Planos de poupança**: compra mensal de valor fixo numa posição (ex: 100 € de VWCE no dia 2). No dia, o Painel avisa para registar a compra — valor e preço pré-preenchidos, unidades estimadas e editáveis, pagamento com um saldo — ou saltar o mês. A app não compra nada sozinha.
@@ -94,7 +95,7 @@ js/
   plans.js              planos de poupança mensais
   goals.js              metas: projeção com juros compostos, regra dos 4%
   rebalance.js          alocação alvo e sugestão de onde investir
-  import/               extratos: xlsx.js e csv.js (leitores), xtb.js (XTB), tr.js (Trade Republic), apply.js (pré-visualizar e aplicar)
+  import/               extratos: xlsx.js e csv.js (leitores), xtb.js (XTB), tr.js (Trade Republic), revolut.js (cripto da Revolut), apply.js (pré-visualizar e aplicar)
   tax.js                relatório IRS: mais-valias FIFO e dividendos (câmbio histórico, resumo anual, CSV)
   alerts.js             alertas de preço
   net.js                pedidos com timeout e concorrência limitada
